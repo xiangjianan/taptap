@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>数一数噻 - 微信数字查找小游戏</title>
+    <meta
+      name="description"
+      content="数一数噻是一款微信数字查找小游戏，从 1 开始按顺序点击多边形数字，挑战反应力、专注力和手速。"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="site-header" aria-label="页面导航">
+      <a class="brand" href="#top" aria-label="数一数噻首页">
+        <span class="brand-mark">数</span>
+        <span>数一数噻</span>
+      </a>
+      <nav class="nav-links" aria-label="主要导航">
+        <a href="#how">玩法</a>
+        <a href="#features">特色</a>
+        <a href="#screens">截图</a>
+        <a href="#play">扫码体验</a>
+      </nav>
+      <a class="header-cta" href="#play">
+        <span aria-hidden="true">▶</span>
+        扫码开玩
+      </a>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-board" aria-hidden="true">
+          <div class="poly poly-blue"><span>7</span></div>
+          <div class="poly poly-green"><span>1</span></div>
+          <div class="poly poly-yellow"><span>4</span></div>
+          <div class="poly poly-coral"><span>8</span></div>
+          <div class="poly poly-violet"><span>5</span></div>
+          <div class="poly poly-orange"><span>10</span></div>
+          <div class="hero-line line-a"></div>
+          <div class="hero-line line-b"></div>
+          <div class="hero-line line-c"></div>
+        </div>
+
+        <div class="hero-content">
+          <h1 id="hero-title">数一数噻</h1>
+          <p class="hero-lede">按顺序，点破 100 个数字迷宫</p>
+          <p class="hero-copy">
+            从第一个 <strong>1</strong> 开始，盯住数字、判断区域、快速点击。限时模式拼反应，自由模式练专注。
+          </p>
+          <div class="hero-actions">
+            <a class="primary-button" href="#play">
+              <span aria-hidden="true">▶</span>
+              扫码开玩
+            </a>
+            <a class="secondary-button" href="#how">查看玩法</a>
+          </div>
+          <dl class="hero-stats" aria-label="游戏亮点">
+            <div>
+              <dt>10</dt>
+              <dd>入门数字</dd>
+            </div>
+            <div>
+              <dt>100</dt>
+              <dd>进阶挑战</dd>
+            </div>
+            <div>
+              <dt>+5s</dt>
+              <dd>点对加时</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="phone-showcase" aria-label="游戏进行截图预览">
+          <div class="phone-shell">
+            <img src="./assets/screenshot-gameplay.jpg" alt="数一数噻游戏进行界面截图" />
+          </div>
+          <div class="timer-chip">15.4s</div>
+          <div class="tap-chip">下一个：3</div>
+        </div>
+      </section>
+
+      <section class="intro-strip" aria-label="玩法摘要">
+        <div class="strip-item">
+          <span>01</span>
+          找到第一个数字
+        </div>
+        <div class="strip-item">
+          <span>02</span>
+          按顺序点击图形
+        </div>
+        <div class="strip-item">
+          <span>03</span>
+          连击、加时、通关
+        </div>
+      </section>
+
+      <section id="how" class="section how-section reveal">
+        <div class="section-heading">
+          <h2>从 1 开始，越点越快</h2>
+          <p>玩法很轻，压力很准：你只需要做一件事，把数字按顺序找出来。</p>
+        </div>
+        <div class="steps">
+          <article class="step step-blue">
+            <span class="step-number">1</span>
+            <h3>锁定目标</h3>
+            <p>每一轮从最小数字开始，先观察数字位置，再判断它所在的多边形区域。</p>
+          </article>
+          <article class="step step-orange">
+            <span class="step-number">2</span>
+            <h3>按序点击</h3>
+            <p>点对就进入下一个数字。限时模式下正确点击加时，点错会扣掉宝贵秒数。</p>
+          </article>
+          <article class="step step-green">
+            <span class="step-number">3</span>
+            <h3>冲刺通关</h3>
+            <p>从 10 个数字练手，到 100 个数字挑战专注力，连击会让节奏越来越爽。</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="screens" class="section screenshots-section reveal">
+        <div class="section-heading">
+          <h2>真实游戏截图</h2>
+          <p>菜单、规则、技能、成就和游玩过程都保留小游戏原生的轻快触感。</p>
+        </div>
+        <div class="screens-layout">
+          <div class="screenshot-stage">
+            <img
+              id="active-shot"
+              src="./assets/screenshot-menu.jpg"
+              alt="数一数噻主菜单截图"
+            />
+          </div>
+          <div class="shot-controls" aria-label="选择截图">
+            <button class="shot-button is-active" type="button" data-shot="./assets/screenshot-menu.jpg" data-alt="数一数噻主菜单截图">
+              <span>开始菜单</span>
+              限时模式与自由模式
+            </button>
+            <button class="shot-button" type="button" data-shot="./assets/screenshot-gameplay.jpg" data-alt="数一数噻游戏进行界面截图">
+              <span>数字迷宫</span>
+              多边形区域实时挑战
+            </button>
+            <button class="shot-button" type="button" data-shot="./assets/screenshot-rules.jpg" data-alt="数一数噻游戏规则截图">
+              <span>游戏规则</span>
+              点对 +5s，点错 -5s
+            </button>
+            <button class="shot-button" type="button" data-shot="./assets/screenshot-skills.jpg" data-alt="数一数噻技能界面截图">
+              <span>技能系统</span>
+              解锁时间与连击增益
+            </button>
+            <button class="shot-button" type="button" data-shot="./assets/screenshot-achievements.jpg" data-alt="数一数噻成就界面截图">
+              <span>成就挑战</span>
+              速度、探索与通关目标
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section id="features" class="section feature-section reveal">
+        <div class="section-heading">
+          <h2>为手速和专注设计</h2>
+          <p>每个系统都围绕“快速找到下一个数字”服务。</p>
+        </div>
+        <div class="feature-grid">
+          <article>
+            <span class="feature-icon blue">⏱</span>
+            <h3>限时挑战</h3>
+            <p>初始 5 秒，正确点击增加时间，错误点击扣除时间，节奏紧凑。</p>
+          </article>
+          <article>
+            <span class="feature-icon green">∞</span>
+            <h3>自由模式</h3>
+            <p>不受倒计时影响，慢慢观察、练习路径记忆和数字识别。</p>
+          </article>
+          <article>
+            <span class="feature-icon yellow">✦</span>
+            <h3>成就与技能</h3>
+            <p>通过金币、技能和成就，把每一次通关变成可积累的成长。</p>
+          </article>
+          <article>
+            <span class="feature-icon coral">▱</span>
+            <h3>随机多边形</h3>
+            <p>LineDivider 生成数字区域，每局都有新的视觉路径和点击判断。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section tech-section reveal">
+        <div class="tech-copy">
+          <h2>Canvas 2D 驱动的微信小游戏</h2>
+          <p>
+            项目以原生 JavaScript 和 Canvas 2D 构建，微信小游戏运行时优先，同时保留浏览器 canvas fallback，便于开发调试。
+          </p>
+        </div>
+        <div class="tech-list" aria-label="技术亮点">
+          <span>WeChat Mini Game</span>
+          <span>Canvas 2D</span>
+          <span>LineDivider</span>
+          <span>ES Modules</span>
+          <span>Achievements</span>
+          <span>Skills</span>
+        </div>
+      </section>
+
+      <section id="play" class="section play-section reveal">
+        <div class="play-copy">
+          <h2>微信扫码，直接开玩</h2>
+          <p>打开微信扫一扫，体验 10 数入门和 100 数挑战。</p>
+          <a class="primary-button" href="#top">
+            <span aria-hidden="true">↑</span>
+            回到顶部
+          </a>
+        </div>
+        <div class="qr-panel">
+          <img src="./assets/wechat-qr.jpg" alt="数一数噻微信扫码体验二维码" />
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>数一数噻</span>
+      <span>微信小游戏 · 100% AI Developed</span>
+    </footer>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
