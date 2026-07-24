@@ -1,0 +1,9 @@
+{
+  "name": "find100-landing",
+  "version": "1.0.0",
+  "private": true,
+  "description": "数一数噻 微信小游戏 Landing Page",
+  "scripts": {
+    "dev": "node server.js"
+  }
+}

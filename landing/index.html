@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
+    <div class="scroll-progress" aria-hidden="true"></div>
     <header class="site-header" aria-label="页面导航">
       <a class="brand" href="#top" aria-label="数一数噻首页">
         <span class="brand-mark">数</span>
@@ -57,15 +58,15 @@
           </div>
           <dl class="hero-stats" aria-label="游戏亮点">
             <div>
-              <dt>10</dt>
+              <dt data-count="10">10</dt>
               <dd>入门数字</dd>
             </div>
             <div>
-              <dt>100</dt>
+              <dt data-count="100">100</dt>
               <dd>进阶挑战</dd>
             </div>
             <div>
-              <dt>+5s</dt>
+              <dt data-count="5" data-prefix="+" data-suffix="s">+5s</dt>
               <dd>点对加时</dd>
             </div>
           </dl>
@@ -80,7 +81,7 @@
         </div>
       </section>
 
-      <section class="intro-strip" aria-label="玩法摘要">
+      <section class="intro-strip reveal" aria-label="玩法摘要">
         <div class="strip-item">
           <span>01</span>
           找到第一个数字
