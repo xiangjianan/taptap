@@ -64,7 +64,7 @@
         "type": "file"
       },
       {
-        "value": ".eslintrc.js",
+        "value": ".eslintrc.cjs",
         "type": "file"
       },
       {
@@ -94,6 +94,42 @@
       {
         "value": "TIMER_OPTIMIZATION_REPORT.md",
         "type": "file"
+      },
+      {
+        "value": "package.json",
+        "type": "file"
+      },
+      {
+        "value": "package-lock.json",
+        "type": "file"
+      },
+      {
+        "value": "node_modules",
+        "type": "folder"
+      },
+      {
+        "value": "scripts",
+        "type": "folder"
+      },
+      {
+        "value": "build",
+        "type": "folder"
+      },
+      {
+        "value": "dist",
+        "type": "folder"
+      },
+      {
+        "value": "test",
+        "type": "folder"
+      },
+      {
+        "value": "landing",
+        "type": "folder"
+      },
+      {
+        "value": "docs",
+        "type": "folder"
       }
     ],
     "include": []

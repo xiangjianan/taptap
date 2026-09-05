@@ -1,0 +1,16 @@
+{
+  "name": "game-find100",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "数一数噻 - 微信/抖音双端小游戏",
+  "scripts": {
+    "test": "node test/scoreManager.test.js && node test/platform.test.js",
+    "lint": "eslint js/ game.js",
+    "build:douyin": "node scripts/build-douyin.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.10",
+    "eslint": "^8.57.0"
+  }
+}
