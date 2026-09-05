@@ -38,7 +38,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `EggManager` | Easter egg sequence detection and reward triggering |
 | `RewardManager` | Mid-game random reward drops (hints, coins, time) |
 | `AchievementManager` | Achievement definitions, progress tracking, unlock detection |
-| `CoinManager` / `ItemManager` / `ShopManager` / `SkillManager` | Currency, inventory, shop products, skill tree — all persisted via `wx.setStorageSync` |
+| `CoinManager` / `ItemManager` / `ShopManager` / `SkillManager` | Currency, inventory, shop products, skill tree — all persisted via `platform.setStorageSync` |
 | `RankManager` | Friend leaderboard via WeChat open-data context |
 | `VibrationManager` | platform 分发的 short/long vibration（原生 + Web Vibration API） |
 | `CacheManager` | Color scheme and state color caching for render performance |
