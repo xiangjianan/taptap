@@ -12,7 +12,12 @@ export default class SoundManager {
   init() {
     this.useGeneratedAudio = true;
     
-    const first = platform.createInnerAudioContext();
+    let first = null;
+    try {
+      first = platform.createInnerAudioContext();
+    } catch (e) {
+      return;
+    }
     if (!first) return;
     
     try {
