@@ -1,3 +1,5 @@
+import platform from './platform';
+
 export default class CoinManager {
   constructor() {
     this.coins = 0;
@@ -45,8 +47,6 @@ export default class CoinManager {
   }
 
   saveCoins() {
-    if (typeof wx === 'undefined' || !wx.setStorageSync) return;
-
     // 防抖：如果已有待保存的定时器，直接返回
     if (this.pendingSave) return;
     
@@ -60,7 +60,7 @@ export default class CoinManager {
     this.saveTimeout = setTimeout(() => {
       this.pendingSave = false;
       try {
-        wx.setStorageSync('coins', this.coins);
+        platform.setStorageSync('coins', this.coins);
       } catch (error) {
       }
     }, 300); // 300ms防抖延迟
@@ -72,20 +72,16 @@ export default class CoinManager {
       clearTimeout(this.saveTimeout);
     }
     this.pendingSave = false;
-    
-    if (typeof wx === 'undefined' || !wx.setStorageSync) return;
-    
+
     try {
-      wx.setStorageSync('coins', this.coins);
+      platform.setStorageSync('coins', this.coins);
     } catch (error) {
     }
   }
 
   loadCoins() {
-    if (typeof wx === 'undefined' || !wx.getStorageSync) return;
-
     try {
-      const savedCoins = wx.getStorageSync('coins');
+      const savedCoins = platform.getStorageSync('coins');
       if (savedCoins !== null && savedCoins !== undefined) {
         this.coins = parseInt(savedCoins, 10) || 0;
       }

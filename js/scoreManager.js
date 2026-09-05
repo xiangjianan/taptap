@@ -1,3 +1,5 @@
+import platform from './platform';
+
 const STORAGE_KEY = 'scoreHistory';
 const MAX_SCORES_PER_LEVEL = 10;
 
@@ -98,30 +100,26 @@ export default class ScoreManager {
   }
 
   saveScores() {
-    if (typeof wx !== 'undefined' && wx.setStorageSync) {
-      try {
-        wx.setStorageSync(STORAGE_KEY, JSON.stringify(this.scores));
-      } catch (e) {
-        // silent
-      }
+    try {
+      platform.setStorageSync(STORAGE_KEY, JSON.stringify(this.scores));
+    } catch (e) {
+      // silent
     }
   }
 
   loadScores() {
-    if (typeof wx !== 'undefined' && wx.getStorageSync) {
-      try {
-        const saved = wx.getStorageSync(STORAGE_KEY);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          this.scores = {
-            1: Array.isArray(parsed[1]) ? parsed[1] : [],
-            2: Array.isArray(parsed[2]) ? parsed[2] : []
-          };
-          return;
-        }
-      } catch (e) {
-        // silent
+    try {
+      const saved = platform.getStorageSync(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        this.scores = {
+          1: Array.isArray(parsed[1]) ? parsed[1] : [],
+          2: Array.isArray(parsed[2]) ? parsed[2] : []
+        };
+        return;
       }
+    } catch (e) {
+      // silent
     }
     this.scores = { 1: [], 2: [] };
   }

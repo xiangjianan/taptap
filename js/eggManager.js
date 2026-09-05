@@ -1,3 +1,5 @@
+import platform from './platform';
+
 export default class EggManager {
   constructor() {
     this.eggs = new Map();
@@ -91,19 +93,15 @@ export default class EggManager {
   }
 
   saveTriggeredEggs() {
-    if (typeof wx === 'undefined' || !wx.setStorageSync) return;
-
     try {
-      wx.setStorageSync('triggered_eggs', JSON.stringify(Array.from(this.triggeredEggs)));
+      platform.setStorageSync('triggered_eggs', JSON.stringify(Array.from(this.triggeredEggs)));
     } catch (error) {
     }
   }
 
   loadTriggeredEggs() {
-    if (typeof wx === 'undefined' || !wx.getStorageSync) return;
-
     try {
-      const saved = wx.getStorageSync('triggered_eggs');
+      const saved = platform.getStorageSync('triggered_eggs');
       if (saved) {
         this.triggeredEggs = new Set(JSON.parse(saved));
       }
@@ -115,12 +113,7 @@ export default class EggManager {
     this.triggeredEggs = new Set();
     this.reverseSequence = [];
     
-    if (typeof wx !== 'undefined' && wx.removeStorageSync) {
-      try {
-        wx.removeStorageSync('triggered_eggs');
-      } catch (error) {
-      }
-    }
+    platform.removeStorageSync('triggered_eggs');
     
     this.saveTriggeredEggs();
   }
