@@ -8,9 +8,10 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## Development Commands
 
-- **Run tests**: `node js/test.js`
-- **Lint**: No dedicated lint command. ESLint config is in `.eslintrc.js` (ES2020 modules, `wx` as global). Run manually with `npx eslint js/` if needed.
-- **Build/Run**: Open the project root in WeChat Developer Tools. No CLI build step — the platform handles ES module compilation.
+- **Run tests**: `npm test`（= scoreManager + platform 两个测试套件）
+- **Lint**: `npm run lint`（= `npx eslint js/ game.js`；配置在 `.eslintrc.cjs`，globals 含 `wx`/`tt`）
+- **Build Douyin package**: `npm run build:douyin` → 产出 `dist/douyin/`，用抖音开发者工具（小游戏独立版）打开该目录
+- **Build/Run (WeChat)**: 打开项目根目录到微信开发者工具，无 CLI 构建步骤
 
 ## Architecture
 

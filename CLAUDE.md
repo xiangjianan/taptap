@@ -8,9 +8,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
-- **Run tests**: `node js/test.js`
-- **Lint**: No dedicated lint command. ESLint config is in `.eslintrc.js` (ES2020 modules, `wx` as global). Run manually with `npx eslint js/` if needed.
-- **Build/Run**: Open the project root in WeChat Developer Tools. No CLI build step — the platform handles ES module compilation.
+- **Run tests**: `npm test`（= scoreManager + platform 两个测试套件）
+- **Lint**: `npm run lint`（= `npx eslint js/ game.js`；配置在 `.eslintrc.cjs`，globals 含 `wx`/`tt`）
+- **Build Douyin package**: `npm run build:douyin` → 产出 `dist/douyin/`，用抖音开发者工具（小游戏独立版）打开该目录
+- **Build/Run (WeChat)**: 打开项目根目录到微信开发者工具，无 CLI 构建步骤
 
 ## Architecture
 
@@ -27,6 +28,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | Module | Role |
 |---|---|
+| `platform.js` | 跨平台适配层：douyin(tt)/wechat(wx)/browser 三态分发（tt 检测优先，抖音可能注入 wx）。所有平台 API 调用的唯一入口 |
 | `GameManager` | Game state machine (menu/playing/completed/failed), click-to-polygon hit testing, timer, combo delegation |
 | `UI` | All Canvas 2D rendering: menus, HUD, modals, shop, skills, achievements, floating text, effects. Also handles button hit-testing and input routing. **This is the largest file (~3600 lines).** |
 | `LineDividerGenerator` | Generates the numbered polygon grid (replaced the original Voronoi approach). Produces `Polygon` instances. |
