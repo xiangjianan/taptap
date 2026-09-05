@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20.11"
+  },
   "description": "数一数噻 - 微信/抖音双端小游戏",
   "scripts": {
     "test": "node test/scoreManager.test.js && node test/platform.test.js",

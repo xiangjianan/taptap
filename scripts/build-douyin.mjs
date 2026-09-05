@@ -1,7 +1,7 @@
 // 抖音小游戏打包脚本：esbuild 单文件 bundle + 配置模板 + 静态资源
 import { build } from 'esbuild';
 import { cpSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -24,8 +24,7 @@ await build({
 
 cpSync(join(ROOT, 'build', 'douyin', 'game.json'), join(DIST, 'game.json'));
 cpSync(join(ROOT, 'build', 'douyin', 'project.config.json'), join(DIST, 'project.config.json'));
-cpSync(join(ROOT, 'audio'), join(DIST, 'audio'), { recursive: true });
-cpSync(join(ROOT, 'image'), join(DIST, 'image'), { recursive: true });
+cpSync(join(ROOT, 'audio'), join(DIST, 'audio'), { recursive: true, filter: (src) => !basename(src).startsWith('.') });
 
 let total = 0;
 function walk(dir) {
