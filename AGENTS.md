@@ -28,6 +28,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 | Module | Role |
 |---|---|
+| `platform.js` | 跨平台适配层：douyin(tt)/wechat(wx)/browser 三态分发（tt 检测优先，抖音可能注入 wx）。所有平台 API 调用的唯一入口 |
 | `GameManager` | Game state machine (menu/playing/completed/failed), click-to-polygon hit testing, timer, combo delegation |
 | `UI` | All Canvas 2D rendering: menus, HUD, modals, shop, skills, achievements, floating text, effects. Also handles button hit-testing and input routing. **This is the largest file (~3600 lines).** |
 | `LineDividerGenerator` | Generates the numbered polygon grid (replaced the original Voronoi approach). Produces `Polygon` instances. |
