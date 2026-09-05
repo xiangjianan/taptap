@@ -20,6 +20,8 @@ module.exports = {
   },
   globals: {
     wx: 'readonly',
+    tt: 'readonly',
+    GameGlobal: 'readonly',
     console: 'readonly',
     Canvas: 'readonly',
     Image: 'readonly',
