@@ -1,4 +1,5 @@
 import { AudioGenerator } from './audioGenerator';
+import platform from './platform';
 
 export default class SoundManager {
   constructor() {
@@ -11,17 +12,18 @@ export default class SoundManager {
   init() {
     this.useGeneratedAudio = true;
     
-    if (typeof wx === 'undefined' || !wx.createInnerAudioContext) return;
+    const first = platform.createInnerAudioContext();
+    if (!first) return;
     
     try {
-      this.sounds.click = wx.createInnerAudioContext();
+      this.sounds.click = first;
       this.sounds.click.src = 'audio/click.wav';
       this.sounds.click.volume = this.volume * 0.5;
       this.sounds.click.onError(() => {
         this.useGeneratedAudio = true;
       });
 
-      this.sounds.uiClick = wx.createInnerAudioContext();
+      this.sounds.uiClick = platform.createInnerAudioContext();
       this.sounds.uiClick.src = 'audio/click-ui.mp3';
       this.sounds.uiClick.volume = this.volume * 0.4;
       this.sounds.uiClick.obeyMuteSwitch = false;
@@ -29,26 +31,26 @@ export default class SoundManager {
         this.sounds.uiClick = null;
       });
       
-      this.sounds.error = wx.createInnerAudioContext();
+      this.sounds.error = platform.createInnerAudioContext();
       this.sounds.error.src = 'audio/error.wav';
       this.sounds.error.onError(() => {
         this.useGeneratedAudio = true;
       });
       
-      this.sounds.complete = wx.createInnerAudioContext();
+      this.sounds.complete = platform.createInnerAudioContext();
       this.sounds.complete.src = 'audio/highscore.mp3';
       this.sounds.complete.onError(() => {
         this.useGeneratedAudio = true;
       });
       
-      this.sounds.coin = wx.createInnerAudioContext();
+      this.sounds.coin = platform.createInnerAudioContext();
       this.sounds.coin.src = 'audio/coin.wav';
       this.sounds.coin.volume = this.volume * 0.6;
       this.sounds.coin.onError(() => {
         this.sounds.coin = null;
       });
 
-      this.sounds.egg = wx.createInnerAudioContext();
+      this.sounds.egg = platform.createInnerAudioContext();
       this.sounds.egg.src = 'audio/egg.wav';
       this.sounds.egg.onError(() => {
         console.log('Egg audio load error, will use fallback');
@@ -57,7 +59,7 @@ export default class SoundManager {
         console.log('Egg audio ready to play');
       });
 
-      this.sounds.fail = wx.createInnerAudioContext();
+      this.sounds.fail = platform.createInnerAudioContext();
       this.sounds.fail.src = 'audio/fail.wav';
       this.sounds.fail.volume = this.volume * 0.35;
       this.sounds.fail.onError(() => {
