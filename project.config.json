@@ -130,6 +130,14 @@
       {
         "value": "docs",
         "type": "folder"
+      },
+      {
+        "value": ".agents",
+        "type": "folder"
+      },
+      {
+        "value": "plans",
+        "type": "folder"
       }
     ],
     "include": []
