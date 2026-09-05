@@ -1,0 +1,10 @@
+{
+  "description": "数一数噻",
+  "appid": "ttxxxxxxxxxxxxxxxx",
+  "projectname": "shuyishusai",
+  "setting": {
+    "es6": true,
+    "urlCheck": false,
+    "minified": true
+  }
+}
