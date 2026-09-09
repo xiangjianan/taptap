@@ -1,3 +1,5 @@
+import platform from './platform';
+
 export default class ItemManager {
   constructor() {
     this.items = new Map();
@@ -68,23 +70,19 @@ export default class ItemManager {
   }
 
   saveItems() {
-    if (typeof wx === 'undefined' || !wx.setStorageSync) return;
-
     try {
       const itemsData = {};
       this.items.forEach((item, id) => {
         itemsData[id] = item.count;
       });
-      wx.setStorageSync('items', JSON.stringify(itemsData));
+      platform.setStorageSync('items', JSON.stringify(itemsData));
     } catch (error) {
     }
   }
 
   loadItems() {
-    if (typeof wx === 'undefined' || !wx.getStorageSync) return;
-
     try {
-      const savedItems = wx.getStorageSync('items');
+      const savedItems = platform.getStorageSync('items');
       if (savedItems) {
         const itemsData = JSON.parse(savedItems);
         this.items.forEach((item, id) => {

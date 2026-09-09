@@ -1,6 +1,8 @@
+import platform from './platform';
+
 export class AudioGenerator {
-  static isWxEnvironment() {
-    return typeof wx !== 'undefined' && typeof wx.createInnerAudioContext === 'function';
+  static isNativeEnvironment() {
+    return platform.type !== 'browser';
   }
 
   static isBrowserEnvironment() {
@@ -9,7 +11,7 @@ export class AudioGenerator {
   }
 
   static getAudioContext() {
-    if (this.isWxEnvironment()) return null;
+    if (this.isNativeEnvironment()) return null;
     if (!this.isBrowserEnvironment()) return null;
     
     if (!this.audioContext) {
@@ -27,9 +29,10 @@ export class AudioGenerator {
     return this.audioContext;
   }
 
-  static playWxSound(src, volume = 0.5, playbackRate = 1) {
+  static playNativeSound(src, volume = 0.5, playbackRate = 1) {
     try {
-      const audio = wx.createInnerAudioContext();
+      const audio = platform.createInnerAudioContext();
+      if (!audio) return;
       audio.src = src;
       audio.volume = volume;
       audio.playbackRate = playbackRate;
@@ -63,9 +66,9 @@ export class AudioGenerator {
     // 前3次连击保持基础音，第4次起频率递增
     const effectiveCombo = Math.max(0, comboCount - 3);
 
-    if (this.isWxEnvironment()) {
+    if (this.isNativeEnvironment()) {
       const rate = Math.min(1 + effectiveCombo * 0.06, 2.5);
-      this.playWxSound('audio/click.wav', 0.18, rate);
+      this.playNativeSound('audio/click.wav', 0.18, rate);
       return;
     }
 
@@ -100,8 +103,8 @@ export class AudioGenerator {
   }
 
   static generateErrorSound() {
-    if (this.isWxEnvironment()) {
-      this.playWxSound('audio/error.wav');
+    if (this.isNativeEnvironment()) {
+      this.playNativeSound('audio/error.wav');
       return;
     }
     
@@ -116,8 +119,8 @@ export class AudioGenerator {
   }
 
   static generateCompleteSound() {
-    if (this.isWxEnvironment()) {
-      this.playWxSound('audio/highscore.mp3');
+    if (this.isNativeEnvironment()) {
+      this.playNativeSound('audio/highscore.mp3');
       return;
     }
     
@@ -135,8 +138,8 @@ export class AudioGenerator {
   }
 
   static generateEggSound() {
-    if (this.isWxEnvironment()) {
-      this.playWxSound('audio/egg.wav');
+    if (this.isNativeEnvironment()) {
+      this.playNativeSound('audio/egg.wav');
       return;
     }
 
@@ -154,8 +157,8 @@ export class AudioGenerator {
   }
 
   static generateFailSound() {
-    if (this.isWxEnvironment()) {
-      this.playWxSound('audio/fail.wav');
+    if (this.isNativeEnvironment()) {
+      this.playNativeSound('audio/fail.wav');
       return;
     }
 

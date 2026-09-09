@@ -1,3 +1,5 @@
+import platform from './platform';
+
 export default class AchievementManager {
   constructor() {
     this.achievements = new Map();
@@ -359,8 +361,6 @@ export default class AchievementManager {
   }
 
   saveProgress() {
-    if (typeof wx === 'undefined' || !wx.setStorageSync) return;
-
     // 防抖：如果已有待保存的定时器，直接返回
     if (this.pendingSave) return;
     
@@ -378,7 +378,7 @@ export default class AchievementManager {
           unlockedAchievements: Array.from(this.unlockedAchievements),
           progress: Array.from(this.progress.entries())
         };
-        wx.setStorageSync('achievement_progress', JSON.stringify(data));
+        platform.setStorageSync('achievement_progress', JSON.stringify(data));
       } catch (error) {
         // 静默处理错误
       }
@@ -391,25 +391,21 @@ export default class AchievementManager {
       clearTimeout(this.saveTimeout);
     }
     this.pendingSave = false;
-    
-    if (typeof wx === 'undefined' || !wx.setStorageSync) return;
-    
+
     try {
       const data = {
         unlockedAchievements: Array.from(this.unlockedAchievements),
         progress: Array.from(this.progress.entries())
       };
-      wx.setStorageSync('achievement_progress', JSON.stringify(data));
+      platform.setStorageSync('achievement_progress', JSON.stringify(data));
     } catch (error) {
       // 静默处理错误
     }
   }
 
   loadProgress() {
-    if (typeof wx === 'undefined' || !wx.getStorageSync) return;
-
     try {
-      const data = wx.getStorageSync('achievement_progress');
+      const data = platform.getStorageSync('achievement_progress');
       if (data) {
         const parsed = JSON.parse(data);
         this.unlockedAchievements = new Set(parsed.unlockedAchievements || []);

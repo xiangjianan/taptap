@@ -15,6 +15,7 @@ import ShareManager from './shareManager';
 import ScoreManager from './scoreManager';
 import { CacheManager } from './cacheManager';
 import { getColorScheme } from './constants/colors';
+import platform from './platform';
 
 // 性能监控工具 - 兼容微信小程序环境
 class PerformanceMonitor {
@@ -152,25 +153,21 @@ export default class FindGameMain {
   }
 
   setupLifecycleListeners() {
-    if (typeof wx !== 'undefined') {
-      wx.onHide(() => {
-        if (this.gameManager.gameState === 'playing') {
-          this.gameManager.pauseTimer();
-          this.saveGameState();
-        }
-      });
-      
-      wx.onShow(() => {
-        if (this.gameManager.isTimerPaused()) {
-          this.showResumeDialog();
-        }
-      });
-    }
+    platform.onHide(() => {
+      if (this.gameManager.gameState === 'playing') {
+        this.gameManager.pauseTimer();
+        this.saveGameState();
+      }
+    });
+
+    platform.onShow(() => {
+      if (this.gameManager.isTimerPaused()) {
+        this.showResumeDialog();
+      }
+    });
   }
 
   saveGameState() {
-    if (typeof wx === 'undefined' || !wx.setStorageSync) return;
-    
     try {
       const state = {
         gameState: this.gameManager.gameState,
@@ -181,17 +178,15 @@ export default class FindGameMain {
         gameMode: this.gameManager.gameMode,
         pausedAt: Date.now()
       };
-      wx.setStorageSync('savedGameState', JSON.stringify(state));
+      platform.setStorageSync('savedGameState', JSON.stringify(state));
     } catch (e) {
       // Silent fail
     }
   }
 
   loadGameState() {
-    if (typeof wx === 'undefined' || !wx.getStorageSync) return null;
-    
     try {
-      const saved = wx.getStorageSync('savedGameState');
+      const saved = platform.getStorageSync('savedGameState');
       if (saved) {
         return JSON.parse(saved);
       }
@@ -202,13 +197,7 @@ export default class FindGameMain {
   }
 
   clearSavedGameState() {
-    if (typeof wx === 'undefined' || !wx.removeStorageSync) return;
-    
-    try {
-      wx.removeStorageSync('savedGameState');
-    } catch (e) {
-      // Silent fail
-    }
+    platform.removeStorageSync('savedGameState');
   }
 
   showResumeDialog() {
@@ -327,10 +316,10 @@ export default class FindGameMain {
       }
     };
     
-    if (typeof wx !== 'undefined' && typeof wx.onTouchStart === 'function') {
-      wx.onTouchStart(handleTouchStart);
-      wx.onTouchMove(handleTouchMove);
-      wx.onTouchEnd(handleTouchEnd);
+    if (platform.type !== 'browser') {
+      platform.onTouchStart(handleTouchStart);
+      platform.onTouchMove(handleTouchMove);
+      platform.onTouchEnd(handleTouchEnd);
     } else {
       if (!canvas || typeof canvas.addEventListener !== 'function') return;
       
@@ -661,14 +650,9 @@ export default class FindGameMain {
     this.itemManager.reset();
     this.scoreManager.reset();
 
-    if (typeof wx !== 'undefined' && wx.removeStorageSync) {
-      try {
-        wx.removeStorageSync('gameProgress');
-        wx.removeStorageSync('gameMode');
-        wx.removeStorageSync('triggered_eggs');
-      } catch (error) {
-      }
-    }
+    platform.removeStorageSync('gameProgress');
+    platform.removeStorageSync('gameMode');
+    platform.removeStorageSync('triggered_eggs');
 
     this.eggManager.reset();
 
@@ -1114,8 +1098,6 @@ export default class FindGameMain {
   }
 
   saveGameProgress(time) {
-    if (typeof wx === 'undefined' || !wx.setStorageSync) return;
-    
     try {
       const progress = {
         bestTime: time,
@@ -1123,13 +1105,13 @@ export default class FindGameMain {
         polygonCount: this.gameManager.polygonCount,
         timestamp: Date.now()
       };
-      
-      const savedProgress = wx.getStorageSync('gameProgress') || {};
+
+      const savedProgress = platform.getStorageSync('gameProgress') || {};
       const key = `level_${this.gameManager.currentLevel}`;
-      
+
       if (!savedProgress[key] || time < savedProgress[key].bestTime) {
         savedProgress[key] = progress;
-        wx.setStorageSync('gameProgress', savedProgress);
+        platform.setStorageSync('gameProgress', savedProgress);
       }
     } catch (e) {
       // 静默处理错误
@@ -1137,10 +1119,8 @@ export default class FindGameMain {
   }
 
   loadGameProgress() {
-    if (typeof wx === 'undefined' || !wx.getStorageSync) return;
-    
     try {
-      const savedProgress = wx.getStorageSync('gameProgress');
+      const savedProgress = platform.getStorageSync('gameProgress');
       // 加载进度但不打印日志
     } catch (e) {
       // 静默处理错误
@@ -1148,27 +1128,19 @@ export default class FindGameMain {
   }
 
   saveGameMode(mode) {
-    if (typeof wx === 'undefined' || !wx.setStorageSync) return;
-    
-    try {
-      wx.setStorageSync('gameMode', mode);
-    } catch (e) {
-      // 静默处理错误
-    }
+    platform.setStorageSync('gameMode', mode);
   }
 
   loadGameMode() {
-    if (typeof wx === 'undefined' || !wx.getStorageSync) return 'timed';
-    
     try {
-      const savedMode = wx.getStorageSync('gameMode');
+      const savedMode = platform.getStorageSync('gameMode');
       if (savedMode && (savedMode === 'timed' || savedMode === 'untimed')) {
         return savedMode;
       }
     } catch (e) {
       // 静默处理错误
     }
-    
+
     return 'timed';
   }
 
@@ -1280,7 +1252,7 @@ export default class FindGameMain {
 
   getBestTime(difficulty, count) {
     try {
-      const savedProgress = wx.getStorageSync('gameProgress');
+      const savedProgress = platform.getStorageSync('gameProgress');
       if (savedProgress) {
         const key = `${difficulty}_${count}`;
         return savedProgress[key] ? savedProgress[key].bestTime : null;

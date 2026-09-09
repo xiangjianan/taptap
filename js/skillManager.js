@@ -1,3 +1,5 @@
+import platform from './platform';
+
 export default class SkillManager {
   constructor() {
     this.skills = new Map();
@@ -352,8 +354,6 @@ export default class SkillManager {
   }
 
   saveProgress() {
-    if (typeof wx === 'undefined' || !wx.setStorageSync) return;
-
     try {
       const data = {
         unlockedSkills: Array.from(this.unlockedSkills),
@@ -362,16 +362,14 @@ export default class SkillManager {
           currentLevel: skill.currentLevel
         }))
       };
-      wx.setStorageSync('skill_progress', JSON.stringify(data));
+      platform.setStorageSync('skill_progress', JSON.stringify(data));
     } catch (error) {
     }
   }
 
   loadProgress() {
-    if (typeof wx === 'undefined' || !wx.getStorageSync) return;
-
     try {
-      const data = wx.getStorageSync('skill_progress');
+      const data = platform.getStorageSync('skill_progress');
       if (data) {
         const parsed = JSON.parse(data);
         this.unlockedSkills = new Set(parsed.unlockedSkills || []);

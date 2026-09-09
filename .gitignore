@@ -1,3 +1,5 @@
 .trae
 .claude
 docs
+node_modules
+dist
