@@ -2,20 +2,20 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/🤖_100%25_AI_Developed-7C3AED?style=for-the-badge" alt="100% AI Developed" />
-  <img src="https://img.shields.io/badge/✨_全程AI生成-00D4AA?style=for-the-badge" alt="全程AI生成" />
+  <img src="https://img.shields.io/badge/✨_100%25_AI_Generated-00D4AA?style=for-the-badge" alt="100% AI Generated" />
 </p>
 
 > **💡 This repo was developed 100% independently by AI — from requirements analysis and coding to testing and debugging, AI led the entire process with no human-written code.**
 
-# 数一数噻 (Find Numbers Game)
+# Find Numbers Game (数一数噻)
 
 A number-finding puzzle game built on the WeChat Mini Game platform. Within a time limit, players must tap numbers scattered across randomly distributed polygons on the screen in order (1, 2, 3...).
 
-<div align="left"><img src="image/wechat.jpg" width="50%" alt="微信扫码体验游戏"></div>
+<div align="left"><img src="image/wechat.jpg" width="50%" alt="Scan QR code with WeChat to play"></div>
 
 ## 🎮 Game Overview
 
-数一数噻 is a puzzle game that tests your reaction speed and number recognition. The game uses the Voronoi diagram algorithm to generate random polygon regions, each containing a number. Players must tap all the numbers in the correct order before the countdown ends.
+Find Numbers Game is a puzzle game that tests your reaction speed and number recognition. The game uses the Voronoi diagram algorithm to generate random polygon regions, each containing a number. Players must tap all the numbers in the correct order before the countdown ends.
 
 ### Game Features
 
@@ -49,25 +49,25 @@ A number-finding puzzle game built on the WeChat Mini Game platform. Within a ti
 
 ```
 find100wx/
-├── game.js                 # 游戏入口文件
-├── game.json               # 游戏配置文件
-├── project.config.json     # 项目配置文件
-├── js/                     # JavaScript 源代码
-│   ├── findGameMain.js     # 主游戏类
-│   ├── gameManager.js      # 游戏管理器
-│   ├── ui.js               # UI 管理器
-│   ├── soundManager.js     # 音效管理器
-│   ├── render.js           # 渲染相关
-│   ├── polygon.js          # 多边形类
-│   ├── polygonGenerator.js # 多边形生成器
-│   ├── voronoiGenerator.js # Voronoi 图生成器
-│   ├── audioGenerator.js   # 音频生成器
-│   └── test.js             # 测试文件
-└── audio/                  # 音频资源
-    ├── bgm.mp3             # 背景音乐
-    ├── click.wav           # 点击音效
-    ├── click.wav        # 完成音效
-    └── click.wav           # 错误音效
+├── game.js                 # game entry file
+├── game.json               # game config file
+├── project.config.json     # project config file
+├── js/                     # JavaScript source code
+│   ├── findGameMain.js     # main game class
+│   ├── gameManager.js      # game manager
+│   ├── ui.js               # UI manager
+│   ├── soundManager.js     # sound manager
+│   ├── render.js           # rendering
+│   ├── polygon.js          # polygon class
+│   ├── polygonGenerator.js # polygon generator
+│   ├── voronoiGenerator.js # Voronoi diagram generator
+│   ├── audioGenerator.js   # audio generator
+│   └── test.js             # test file
+└── audio/                  # audio assets
+    ├── bgm.mp3             # background music
+    ├── click.wav           # tap sound effect
+    ├── click.wav        # completion sound effect
+    └── click.wav           # error sound effect
 ```
 
 ### Core Modules
@@ -135,7 +135,7 @@ The Voronoi diagram generator, responsible for:
 ### Local Development
 
 ```bash
-# 如果需要运行测试
+# Run tests if needed
 node js/test.js
 ```
 
@@ -167,10 +167,10 @@ Edit `levelConfig` in `js/ui.js`:
 
 ```javascript
 this.levelConfig = {
-  1: { count: 10, name: '第一关' },
-  2: { count: 100, name: '第二关' },
-  // 添加更多关卡...
-  3: { count: 50, name: '第三关' }
+  1: { count: 10, name: 'Level 1' },
+  2: { count: 100, name: 'Level 2' },
+  // add more levels...
+  3: { count: 50, name: 'Level 3' }
 };
 ```
 
@@ -179,9 +179,9 @@ this.levelConfig = {
 Edit the time parameters in `js/gameManager.js`:
 
 ```javascript
-this.timeLeft = 5.0;      // 初始时间
-this.initialTime = 5.0;    // 初始时间
-this.timeBonus = 5.0;     // 时间奖励/惩罚
+this.timeLeft = 5.0;      // initial time
+this.initialTime = 5.0;    // initial time
+this.timeBonus = 5.0;     // time bonus/penalty
 ```
 
 ### Modify the color scheme
@@ -191,7 +191,7 @@ Edit the `colors` array in `js/voronoiGenerator.js`:
 ```javascript
 this.colors = [
   '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
-  // 添加更多颜色...
+  // add more colors...
 ];
 ```
 
@@ -220,7 +220,7 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 ## 👨‍💻 Author
 
-- Project name: 数一数噻 (Find Numbers Game)
+- Project name: Find Numbers Game (数一数噻)
 - Author: xiangjianan
 
 ## 🙏 Acknowledgements
@@ -230,4 +230,4 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 ***
 
-**祝你游戏愉快！🎉**
+**Enjoy the game! 🎉**
