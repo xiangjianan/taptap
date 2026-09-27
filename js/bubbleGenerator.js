@@ -63,7 +63,8 @@ export default class BubbleGenerator {
     return this.buildPolygons(cells, rng);
   }
 
-  // 游戏区边界（与 LineDividerGenerator 完全一致的布局约定）
+  // 游戏区边界（布局约定与全项目一致：isMobile 时 header = max(100, safeArea.top+56)、
+  // footer = max(80, safeArea.bottom+46)，四周 padding 12；桌面端 header 130 / footer 60）
   computeBounds() {
     const isMobile = this.width < 768;
     const topSafeArea = Math.max(this.safeArea.top, isMobile ? 44 : 0);
