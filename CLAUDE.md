@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
-- **Run tests**: `node js/test.js`
+- **Run tests**: `node test/scoreManager.test.js && node test/bubbleGenerator.test.mjs`
 - **Lint**: No dedicated lint command. ESLint config is in `.eslintrc.js` (ES2020 modules, `wx` as global). Run manually with `npx eslint js/` if needed.
 - **Build/Run**: Open the project root in WeChat Developer Tools. No CLI build step — the platform handles ES module compilation.
 
