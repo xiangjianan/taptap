@@ -7,13 +7,13 @@ import { COLORS } from './constants/colors.js';
 //   线性插值机制保留（两端相同即恒定），便于日后重新分层调参
 const SIZE_RANGE_AT_10 = { rMin: 0.52, rMax: 2.05 };
 const SIZE_RANGE_AT_100 = { rMin: 0.52, rMax: 2.05 };
-const COVERAGE = 1.08;         // Σπr² 相对游戏区面积的比例
+const COVERAGE = 1.08;         // Σπr² 相对游戏区面积的比例。30 种子 × 100 格实测：调高覆盖系数会让布点更挤、小格更易被压扁，反而增加整盘软化；1.08 软化最少（用户 2026-09-27 要求两关均保持 4:1 直径比）
 const SPACING_BETA = 0.78;     // 掷点间距系数：4:1 权重比下若两种子间距² < (w大−w小)，小种子的幂胞会被大邻居整个吞掉；β=0.78 保证最极端配对的间距 ≥ √(w大−w小)，防止格子凭空消失
 const PLACEMENT_TRIES = 45;    // 每个种子的掷点尝试次数
 const LLOYD_ITERATIONS = 4;    // 松弛轮数（越多格子越"饱满"）
 const DEGENERATE_AREA = 4;     // 低于此面积视为被挤没，增重重算
-const MIN_CELL_AREA = 300;     // 最小格子面积：对齐旧生成器第 2 关真实容忍度（~300px² 的格子很常见），4:1×100 时最小格约 340px²
-const MIN_CELL_WIDTH = 16;     // 最小格子包围盒短边：旧生成器 100 格时 dynamicMinWidth ≈ 14px，16px 留少量裕量
+const MIN_CELL_AREA = 280;     // 最小格子面积：旧生成器第 2 关 ~300px² 小格常见、280px² 仍可点选；4:1×100 时理想最小格约 340px²
+const MIN_CELL_WIDTH = 15;     // 最小格子包围盒短边：旧生成器 100 格时 dynamicMinWidth ≈ 14px，15px 留少量裕量
 const SOFTEN_MAX_ATTEMPTS = 5; // 最小尺寸不达标时的软化重试次数
 const SOFTEN_FACTOR = 0.8;     // 每次重试区间向中点收缩的比例
 const EPS = 1e-9;

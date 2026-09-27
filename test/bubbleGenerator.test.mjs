@@ -136,9 +136,9 @@ function minBBoxSide(poly) {
   return Math.min(maxX - minX, maxY - minY);
 }
 
-assert(polys10.every(p => p.getArea() >= 300), '10 格：每个格子面积 ≥ 300px²');
-assert(polys100.every(p => p.getArea() >= 300), '100 格：每个格子面积 ≥ 300px²');
-assert(polys100.every(p => minBBoxSide(p.vertices) >= 16), '100 格：每个格子包围盒短边 ≥ 16px');
+assert(polys10.every(p => p.getArea() >= 280), '10 格：每个格子面积 ≥ 280px²');
+assert(polys100.every(p => p.getArea() >= 280), '100 格：每个格子面积 ≥ 280px²');
+assert(polys100.every(p => minBBoxSide(p.vertices) >= 15), '100 格：每个格子包围盒短边 ≥ 15px');
 
 const areas10 = polys10.map(p => p.getArea()).sort((a, b) => a - b);
 assert(areas10[areas10.length - 1] / areas10[0] >= 2, '10 格：最大/最小面积比 ≥ 2（强对比生效）');
