@@ -1,4 +1,4 @@
-import { COLORS, getColorScheme, BRUTALISM_STYLES } from './constants/colors';
+import { COLORS, getColorScheme, BRUTALISM_STYLES } from './constants/colors.js';
 
 // 缓存颜色方案，避免每帧重复计算
 let cachedScheme = null;
