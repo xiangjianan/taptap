@@ -72,6 +72,46 @@
         "type": "folder"
       },
       {
+        "value": "node_modules",
+        "type": "folder"
+      },
+      {
+        "value": ".claude",
+        "type": "folder"
+      },
+      {
+        "value": ".agents",
+        "type": "folder"
+      },
+      {
+        "value": ".superpowers",
+        "type": "folder"
+      },
+      {
+        "value": "landing",
+        "type": "folder"
+      },
+      {
+        "value": "dist",
+        "type": "folder"
+      },
+      {
+        "value": "docs",
+        "type": "folder"
+      },
+      {
+        "value": "plans",
+        "type": "folder"
+      },
+      {
+        "value": "test",
+        "type": "folder"
+      },
+      {
+        "value": ".DS_Store",
+        "type": "file"
+      },
+      {
         "value": "ARCHITECTURE.md",
         "type": "file"
       },
