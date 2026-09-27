@@ -29,7 +29,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 |---|---|
 | `GameManager` | Game state machine (menu/playing/completed/failed), click-to-polygon hit testing, timer, combo delegation |
 | `UI` | All Canvas 2D rendering: menus, HUD, modals, shop, skills, achievements, floating text, effects. Also handles button hit-testing and input routing. **This is the largest file (~3600 lines).** |
-| `LineDividerGenerator` | Generates the numbered polygon grid (replaced the original Voronoi approach). Produces `Polygon` instances. |
+| `BubbleGenerator` | Generates the numbered polygon grid: weighted Voronoi (power diagram) + Lloyd relaxation produces plump convex "bubble" cells of varying sizes. Produces `Polygon` instances. |
 | `Polygon` | Single polygon region with state (clicked, highlighted, hint, eagle-eye), shape rendering, text rendering, animations (shake, glow) |
 | `SoundManager` / `AudioGenerator` | Audio playback via WeChat `wx.createInnerAudioContext` with programmatic tone fallback |
 | `ComboManager` | Combo counter with level thresholds, callbacks for level-up/break |
@@ -70,4 +70,4 @@ The `isMobile` check used throughout is `this.width < 768`.
 - **Dual runtime support**: code guards with `typeof wx !== 'undefined'` for WeChat-specific APIs.
 - **Animation**: `requestAnimationFrame` loop with deltaTime. UI animations use lerp (`animation += deltaTime * speed`).
 - **Scroll handling**: each scrollable panel (shop, skills, achievements) maintains its own scroll offset, velocity, friction, and touch state.
-- **Polygon generation** uses `LineDividerGenerator` (line-division algorithm), not Voronoi. The README is outdated in this regard.
+- **Polygon generation** uses `BubbleGenerator` (weighted Voronoi / power diagram with per-seed radii + Lloyd relaxation), NOT line division and NOT plain Voronoi. Safe area is injected via constructor (no `render.js` import) so the module stays Node-testable. The README is outdated in this regard.

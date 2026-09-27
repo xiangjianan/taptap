@@ -1,4 +1,5 @@
-import LineDividerGenerator from './lineDividerGenerator';
+import BubbleGenerator from './bubbleGenerator.js';
+import { SAFE_AREA } from './render';
 import ComboManager from './comboManager';
 import EggManager from './eggManager';
 
@@ -6,7 +7,7 @@ export default class GameManager {
   constructor(width, height) {
     this.width = width;
     this.height = height;
-    this.generator = new LineDividerGenerator(width, height);
+    this.generator = new BubbleGenerator(width, height, { safeArea: SAFE_AREA });
     this.comboManager = new ComboManager();
     this.eggManager = new EggManager();
     this.polygons = [];
@@ -85,7 +86,8 @@ export default class GameManager {
     this.gameMode = gameMode;
     this.polygons = this.generator.generatePolygons(count, 'normal');
     this.currentNumber = 1;
-    this.totalNumbers = count;
+    // 以实际返回的格子数为准（生成器对极端 count 有容量钳制）
+    this.totalNumbers = this.polygons.length;
     this.gameState = 'playing';
     this.startTime = Date.now();
     this.totalPausedDuration = 0;
