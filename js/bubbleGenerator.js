@@ -38,23 +38,29 @@ export default class BubbleGenerator {
     this.colors = COLORS.POLYGON_COLORS;
   }
 
-  generatePolygons(count, difficulty = 'normal', seed) {
+  generatePolygons(count, difficulty = 'normal', seed) { // difficulty 签名与旧生成器对齐，暂不使用
     const bounds = this.computeBounds();
     const rng = mulberry32(seed === undefined ? (Math.random() * 0xFFFFFFFF) >>> 0 : seed >>> 0);
 
+    // 密度上限：格子数不能超过游戏区按最小格子面积能容纳的数量
+    //（更小的格子放不下数字也点不中；调用方以返回的数组长度为准）
+    const maxCount = Math.floor((bounds.width * bounds.height) / MIN_CELL_AREA);
+    const cellCount = Math.min(count, maxCount);
+
     let cells = null;
+    let valid = false;
     for (let attempt = 0; attempt < SOFTEN_MAX_ATTEMPTS; attempt++) {
-      const range = this.sizeRangeFor(count, Math.pow(SOFTEN_FACTOR, attempt));
-      cells = this.tessellate(bounds, count, range.rMin, range.rMax, rng);
-      if (this.isValid(cells, count)) break;
+      const range = this.sizeRangeFor(cellCount, Math.pow(SOFTEN_FACTOR, attempt));
+      cells = this.tessellate(bounds, cellCount, range.rMin, range.rMax, rng);
+      if ((valid = this.isValid(cells, cellCount))) break;
     }
 
-    // 兜底：仍有格子被挤没 → 近均匀区间重算，保证返回数量恒等于 count
-    if (!this.isValid(cells, count)) {
-      cells = this.tessellate(bounds, count, 0.85, 1.15, rng);
+    // 兜底：仍有格子被挤没 → 近均匀区间重算，保证返回数量恒等于 cellCount
+    if (!valid) {
+      cells = this.tessellate(bounds, cellCount, 0.85, 1.15, rng);
     }
 
-    return this.buildPolygons(cells, count, rng);
+    return this.buildPolygons(cells, rng);
   }
 
   // 游戏区边界（与 LineDividerGenerator 完全一致的布局约定）
@@ -227,7 +233,7 @@ export default class BubbleGenerator {
     return true;
   }
 
-  buildPolygons(cells, count, rng) {
+  buildPolygons(cells, rng) {
     const indices = cells.map((_, i) => i);
     for (let i = indices.length - 1; i > 0; i--) {
       const j = Math.floor(rng() * (i + 1));

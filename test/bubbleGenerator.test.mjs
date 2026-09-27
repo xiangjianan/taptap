@@ -156,6 +156,21 @@ assertEqual(JSON.stringify(a60.map(p => p.number)), JSON.stringify(b60.map(p => 
 const c60 = makeGenerator().generatePolygons(60, 'normal', SEED + 1);
 assert(JSON.stringify(a60.map(p => p.vertices)) !== JSON.stringify(c60.map(p => p.vertices)), '不同种子布局不同');
 
+// ── 种子扫描与边界 count ──
+console.log('\n种子扫描与边界 count:');
+
+let sweepOk = true;
+for (let s = 1; s <= 15; s++) {
+  for (const n of [10, 60, 100]) {
+    const ps = makeGenerator().generatePolygons(n, 'normal', SEED + s * 7919);
+    if (ps.length !== n || !ps.every(p => p.vertices.length >= 3)) sweepOk = false;
+  }
+}
+assert(sweepOk, '15 个种子 × {10,60,100}：数量恒等于请求值且每格 ≥3 顶点');
+
+assertEqual(makeGenerator().generatePolygons(1, 'normal', SEED).length, 1, 'count=1 返回 1 格');
+assertEqual(makeGenerator().generatePolygons(2, 'normal', SEED).length, 2, 'count=2 返回 2 格');
+
 // ── Summary ──
 console.log(`\n${'='.repeat(40)}`);
 console.log(`Results: ${passed} passed, ${failed} failed`);
