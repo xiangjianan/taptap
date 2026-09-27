@@ -1,19 +1,19 @@
 import Polygon from './polygon.js';
 import { COLORS } from './constants/colors.js';
 
-// 自适应尺寸区间（浏览器视觉验收确认）：
-//   10 格 → 半径区间 [0.52, 2.05]（直径比约 4:1 强对比）
-//   100 格 → [0.68, 1.6]（约 2.4:1，保证三位数可读）
-//   中间按 count 线性插值，两端截断
+// 自适应尺寸区间（用户 2026-09-27 决定：两关统一 4:1 直径强对比，
+//   第 2 关不再使用柔和的 2.4:1）：
+//   10 格与 100 格 → 半径区间均为 [0.52, 2.05]（直径比约 4:1）
+//   线性插值机制保留（两端相同即恒定），便于日后重新分层调参
 const SIZE_RANGE_AT_10 = { rMin: 0.52, rMax: 2.05 };
-const SIZE_RANGE_AT_100 = { rMin: 0.68, rMax: 1.6 };
+const SIZE_RANGE_AT_100 = { rMin: 0.52, rMax: 2.05 };
 const COVERAGE = 1.08;         // Σπr² 相对游戏区面积的比例
-const SPACING_BETA = 0.72;     // 掷点间距系数（越小种子允许挤得越紧）
+const SPACING_BETA = 0.78;     // 掷点间距系数：4:1 权重比下若两种子间距² < (w大−w小)，小种子的幂胞会被大邻居整个吞掉；β=0.78 保证最极端配对的间距 ≥ √(w大−w小)，防止格子凭空消失
 const PLACEMENT_TRIES = 45;    // 每个种子的掷点尝试次数
 const LLOYD_ITERATIONS = 4;    // 松弛轮数（越多格子越"饱满"）
 const DEGENERATE_AREA = 4;     // 低于此面积视为被挤没，增重重算
-const MIN_CELL_AREA = 400;     // 最小格子面积（数字可读 + 可点选）
-const MIN_CELL_WIDTH = 24;     // 最小格子包围盒短边
+const MIN_CELL_AREA = 300;     // 最小格子面积：对齐旧生成器第 2 关真实容忍度（~300px² 的格子很常见），4:1×100 时最小格约 340px²
+const MIN_CELL_WIDTH = 16;     // 最小格子包围盒短边：旧生成器 100 格时 dynamicMinWidth ≈ 14px，16px 留少量裕量
 const SOFTEN_MAX_ATTEMPTS = 5; // 最小尺寸不达标时的软化重试次数
 const SOFTEN_FACTOR = 0.8;     // 每次重试区间向中点收缩的比例
 const EPS = 1e-9;

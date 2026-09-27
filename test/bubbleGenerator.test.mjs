@@ -136,14 +136,14 @@ function minBBoxSide(poly) {
   return Math.min(maxX - minX, maxY - minY);
 }
 
-assert(polys10.every(p => p.getArea() >= 400), '10 格：每个格子面积 ≥ 400px²');
-assert(polys100.every(p => p.getArea() >= 400), '100 格：每个格子面积 ≥ 400px²');
-assert(polys100.every(p => minBBoxSide(p.vertices) >= 24), '100 格：每个格子包围盒短边 ≥ 24px');
+assert(polys10.every(p => p.getArea() >= 300), '10 格：每个格子面积 ≥ 300px²');
+assert(polys100.every(p => p.getArea() >= 300), '100 格：每个格子面积 ≥ 300px²');
+assert(polys100.every(p => minBBoxSide(p.vertices) >= 16), '100 格：每个格子包围盒短边 ≥ 16px');
 
 const areas10 = polys10.map(p => p.getArea()).sort((a, b) => a - b);
 assert(areas10[areas10.length - 1] / areas10[0] >= 2, '10 格：最大/最小面积比 ≥ 2（强对比生效）');
 const areas100 = polys100.map(p => p.getArea()).sort((a, b) => a - b);
-assert(areas100[areas100.length - 1] / areas100[0] >= 1.5, '100 格：最大/最小面积比 ≥ 1.5');
+assert(areas100[areas100.length - 1] / areas100[0] >= 3, '100 格：最大/最小面积比 ≥ 3（强对比在第 2 关同样生效）');
 
 // ── 同种子可复现 ──
 console.log('\n同种子可复现:');
