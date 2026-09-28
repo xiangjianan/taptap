@@ -219,8 +219,8 @@ function gridSeeds(rows, cols, r) {
 
 // 等权规则网格：权重相消退化为普通 Voronoi，对角邻居分割线在数学上
 // 恰好穿过格子角点——评审构造的擦边（knife-edge）重现形状
-checkSeedsEqual(gridSeeds(2, 25, 10), '等权 2×25 规则网格：剪枝与全量参考一致');
-checkSeedsEqual(gridSeeds(7, 8, 10), '等权 7×8 规则网格：剪枝与全量参考一致');
+checkSeedsEqual(gridSeeds(25, 2, 10), '等权 25×2 规则网格：剪枝与全量参考一致');
+checkSeedsEqual(gridSeeds(8, 7, 10), '等权 8×7 规则网格：剪枝与全量参考一致');
 
 // 重合种子：等权与不等权各一组
 const ccx = advBounds.x + advBounds.width / 2;
