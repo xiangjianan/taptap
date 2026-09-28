@@ -191,6 +191,84 @@ for (const [w, h] of [[375, 812], [320, 568]]) {
   }
 }
 
+// ── 对抗构造种子（不经 placeSeeds）等价性 ──
+console.log('\n对抗构造种子等价性:');
+
+const advGen = new BubbleGenerator(375, 812, { safeArea: { top: 44, bottom: 34, left: 0, right: 0 } });
+const advBounds = advGen.computeBounds();
+
+function checkSeedsEqual(seeds, message) {
+  const fast = advGen.computeCells(seeds, advBounds);
+  const ref = BubbleGenerator.computeCellsReference(seeds, advBounds);
+  assert(JSON.stringify(fast) === JSON.stringify(ref), message);
+}
+
+function gridSeeds(rows, cols, r) {
+  const seeds = [];
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      seeds.push({
+        x: advBounds.x + (advBounds.width * (j + 0.5)) / cols,
+        y: advBounds.y + (advBounds.height * (i + 0.5)) / rows,
+        r
+      });
+    }
+  }
+  return seeds;
+}
+
+// 等权规则网格：权重相消退化为普通 Voronoi，对角邻居分割线在数学上
+// 恰好穿过格子角点——评审构造的擦边（knife-edge）重现形状
+checkSeedsEqual(gridSeeds(2, 25, 10), '等权 2×25 规则网格：剪枝与全量参考一致');
+checkSeedsEqual(gridSeeds(7, 8, 10), '等权 7×8 规则网格：剪枝与全量参考一致');
+
+// 重合种子：等权与不等权各一组
+const ccx = advBounds.x + advBounds.width / 2;
+const ccy = advBounds.y + advBounds.height / 2;
+const ringSeeds = [
+  { x: advBounds.x + 40, y: advBounds.y + 60, r: 12 },
+  { x: advBounds.x + advBounds.width - 40, y: advBounds.y + 60, r: 12 },
+  { x: advBounds.x + 40, y: advBounds.y + advBounds.height - 60, r: 12 },
+  { x: advBounds.x + advBounds.width - 40, y: advBounds.y + advBounds.height - 60, r: 12 }
+];
+checkSeedsEqual([
+  { x: ccx, y: ccy, r: 12 },
+  { x: ccx, y: ccy, r: 12 },
+  ...ringSeeds
+], '重合种子（等权）：剪枝与全量参考一致');
+checkSeedsEqual([
+  { x: ccx, y: ccy, r: 12 },
+  { x: ccx, y: ccy, r: 30 },
+  ...ringSeeds
+], '重合种子（不等权）：剪枝与全量参考一致');
+
+// 权重悬殊：中心种子的权重 500 倍于邻居
+const dominated = gridSeeds(7, 8, 8);
+dominated[27].r = 8 * Math.sqrt(500);
+checkSeedsEqual(dominated, '权重悬殊（大种子权重 ×500）：剪枝与全量参考一致');
+
+// ── Lloyd 增重状态等价性（修复逻辑逐轮 ×1.12 后的种子状态） ──
+console.log('\nLloyd 增重状态等价性:');
+
+for (const [w, h] of [[375, 812], [320, 568]]) {
+  let allOk = true;
+  for (let s = 1; s <= 3; s++) {
+    const gen = new BubbleGenerator(w, h, { safeArea: { top: 44, bottom: 34, left: 0, right: 0 } });
+    const rng = mulberry32(SEED + s * 7919);
+    const cellBounds = gen.computeBounds();
+    const range = gen.sizeRangeFor(100, 1);
+    let seeds = gen.placeSeeds(cellBounds, 100, range.rMin, range.rMax, rng);
+    for (let k = 1; k <= 4; k++) {
+      seeds = seeds.map(sd => ({ x: sd.x, y: sd.y, r: sd.r * 1.12 }));
+      if (JSON.stringify(gen.computeCells(seeds, cellBounds)) !==
+          JSON.stringify(BubbleGenerator.computeCellsReference(seeds, cellBounds))) {
+        allOk = false;
+      }
+    }
+  }
+  assert(allOk, `${w}×${h}：Lloyd 增重状态（r×1.12^k，k=1..4）剪枝等价`);
+}
+
 // ── Summary ──
 console.log(`\n${'='.repeat(40)}`);
 console.log(`Results: ${passed} passed, ${failed} failed`);

@@ -166,11 +166,15 @@ export default class BubbleGenerator {
   // 幂图（加权 Voronoi）：每个格子从游戏区矩形出发，
   // 逐个用与其它种子的加权分割线裁剪。种子 i、j（权重 w = r²）的
   // 分割线为 |p−si|² − wi = |p−sj|² − wj，是一条直线，故结果恒为凸多边形。
-  // 性能：裁剪前先做严格可证的安全跳过——半平面函数在种子 i 处取值
-  // f(si) = (wj−wi) − d²；当 f(si) < 0（种子在保留侧）且轴线到种子距离
-  // (−f(si))/(2d) 大于当前顶点到种子的最远距离 R 时，全部顶点严格落在
-  // 保留侧，这次裁剪是纯空操作（全量实现里恰为顶点数组循环左移一位）。
-  // 用移位计数代替空操作裁剪并延迟批量应用，输出与全量实现逐位一致
+  // 性能：裁剪前做两级跳过——
+  //  1) O(1) 圆盘预筛：半平面函数在种子 i 处取值 f(si) = (wj−wi) − d²，
+  //     当 f(si) < 0（种子在保留侧）且轴线到种子距离 (−f(si))/(2d) 以
+  //     (1+1e-9) 相对裕度超过顶点最远距离 R 时才跳过。这只是保守过滤器、
+  //     并非逐位精确——相切/擦边情形会落到下一级；
+  //  2) O(V) 精确判定：全部顶点严格在保留侧（与 clipHalfPlane 同一算式、
+  //     同一舍入）⟺ 裁剪只走"全保留"分支 ⟺ 恰为循环左移一位。
+  //     与全量实现的逐位一致性由这一级保证。
+  // 被跳过的空操作裁剪用移位计数代替并延迟批量应用
   //（等价性由 computeCellsReference 交叉验证覆盖）。
   computeCells(seeds, bounds) {
     const cells = [];
@@ -205,7 +209,9 @@ export default class BubbleGenerator {
         const fSi = ws[j] - wi - dSq; // 半平面函数在种子 i 处的取值
         if (dSq > 0 && fSi < 0) {
           if (rCurSq < 0) rCurSq = maxDistSqFrom(poly, xi, yi);
-          if (fSi * fSi > 4 * dSq * rCurSq) { // 轴线距离² > R² ⇒ 空操作
+          // 保守预筛（非逐位精确）：(1+1e-9) 相对裕度隔离相切/擦边情形，
+          // 存疑的一律落到下方精确判定，逐位一致性由精确判定兜底
+          if (fSi * fSi > 4 * dSq * rCurSq * (1 + 1e-9)) {
             rot++;
             continue;
           }
@@ -362,6 +368,8 @@ function rotateBy(poly, k) {
   const n = poly.length;
   if (n < 2) return poly;
   const s = ((k % n) + n) % n;
+  // s===0 时返回原引用：多个格子可能共享 rect 种子数组——现有消费方只读；
+  // 若未来要原地修改顶点，此处必须先复制
   if (s === 0) return poly;
   const out = new Array(n);
   for (let i = 0; i < n; i++) out[i] = poly[(i + s) % n];
