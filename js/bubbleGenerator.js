@@ -19,8 +19,8 @@ const SOFTEN_MAX_ATTEMPTS = 5; // 最小尺寸不达标时的软化重试次数
 const SOFTEN_FACTOR = 0.8;     // 每次重试区间向中点收缩的比例
 const EPS = 1e-9;
 
-// 种子随机数（可复现：同 seed 同布局）
-function mulberry32(seed) {
+// 种子随机数（可复现：同 seed 同布局；命名导出供测试直接驱动 placeSeeds）
+export function mulberry32(seed) {
   let a = seed >>> 0;
   return function () {
     a |= 0;
@@ -126,6 +126,7 @@ export default class BubbleGenerator {
 
     // 掷点法：优先放在与已有种子挤压度最低的位置
     const seeds = [];
+    const sx = [], sy = [], sr = []; // 平行数组：内层热循环免去属性访问
     for (let i = 0; i < count; i++) {
       const r = radii[i];
       const margin = Math.min(r, bounds.width / 2 - 2, bounds.height / 2 - 2);
@@ -135,30 +136,42 @@ export default class BubbleGenerator {
         const x = bounds.x + margin + rng() * Math.max(1, bounds.width - 2 * margin);
         const y = bounds.y + margin + rng() * Math.max(1, bounds.height - 2 * margin);
         let fits = true;
-        let minRatio = Infinity;
-        for (let j = 0; j < seeds.length; j++) {
-          const d = Math.hypot(x - seeds[j].x, y - seeds[j].y);
-          const ratio = d / (SPACING_BETA * (r + seeds[j].r));
-          if (ratio < 1) fits = false;
-          if (ratio < minRatio) minRatio = ratio;
+        let minRatioSq = Infinity;
+        for (let j = 0; j < i; j++) {
+          const dx = x - sx[j];
+          const dy = y - sy[j];
+          const dSq = dx * dx + dy * dy;
+          const needSq = SPACING_BETA * (r + sr[j]) * SPACING_BETA * (r + sr[j]);
+          if (dSq < needSq) fits = false; // 平方距离比较，避免 hypot+除法
+          const ratioSq = dSq / needSq;   // ratio² 与 ratio 单调等价，argmin 不变
+          if (ratioSq < minRatioSq) minRatioSq = ratioSq;
         }
         if (fits) {
           best = { x, y, r };
           break;
         }
-        if (minRatio > bestScore) {
-          bestScore = minRatio;
+        if (minRatioSq > bestScore) {
+          bestScore = minRatioSq;
           best = { x, y, r };
         }
       }
       seeds.push(best);
+      sx.push(best.x);
+      sy.push(best.y);
+      sr.push(best.r);
     }
     return seeds;
   }
 
   // 幂图（加权 Voronoi）：每个格子从游戏区矩形出发，
   // 逐个用与其它种子的加权分割线裁剪。种子 i、j（权重 w = r²）的
-  // 分割线为 |p−si|² − wi = |p−sj|² − wj，是一条直线，故结果恒为凸多边形
+  // 分割线为 |p−si|² − wi = |p−sj|² − wj，是一条直线，故结果恒为凸多边形。
+  // 性能：裁剪前先做严格可证的安全跳过——半平面函数在种子 i 处取值
+  // f(si) = (wj−wi) − d²；当 f(si) < 0（种子在保留侧）且轴线到种子距离
+  // (−f(si))/(2d) 大于当前顶点到种子的最远距离 R 时，全部顶点严格落在
+  // 保留侧，这次裁剪是纯空操作（全量实现里恰为顶点数组循环左移一位）。
+  // 用移位计数代替空操作裁剪并延迟批量应用，输出与全量实现逐位一致
+  //（等价性由 computeCellsReference 交叉验证覆盖）。
   computeCells(seeds, bounds) {
     const cells = [];
     const rect = [
@@ -167,6 +180,74 @@ export default class BubbleGenerator {
       { x: bounds.x + bounds.width, y: bounds.y + bounds.height },
       { x: bounds.x, y: bounds.y + bounds.height }
     ];
+    const n = seeds.length;
+    const xs = new Float64Array(n);
+    const ys = new Float64Array(n);
+    const ws = new Float64Array(n);
+    const cs = new Float64Array(n); // x²+y²−w：分割线常数项缓存
+    for (let k = 0; k < n; k++) {
+      const r = seeds[k].r;
+      xs[k] = seeds[k].x;
+      ys[k] = seeds[k].y;
+      ws[k] = r * r;
+      cs[k] = xs[k] * xs[k] + ys[k] * ys[k] - ws[k];
+    }
+    for (let i = 0; i < n; i++) {
+      let poly = rect;
+      const xi = xs[i], yi = ys[i], wi = ws[i], ci = cs[i];
+      let rot = 0;     // 连续空操作裁剪等价于循环左移，攒批后一次应用
+      let rCurSq = -1; // 当前多边形顶点到种子 i 的最远距离²（懒计算）
+      for (let j = 0; j < n && poly.length >= 3; j++) {
+        if (j === i) continue;
+        const dx = xs[j] - xi;
+        const dy = ys[j] - yi;
+        const dSq = dx * dx + dy * dy;
+        const fSi = ws[j] - wi - dSq; // 半平面函数在种子 i 处的取值
+        if (dSq > 0 && fSi < 0) {
+          if (rCurSq < 0) rCurSq = maxDistSqFrom(poly, xi, yi);
+          if (fSi * fSi > 4 * dSq * rCurSq) { // 轴线距离² > R² ⇒ 空操作
+            rot++;
+            continue;
+          }
+        }
+        // 精确空操作判定：全部顶点严格在保留侧（与 clipHalfPlane 同一算式，
+        // 同一舍入）⟺ 裁剪只会走"全保留"分支 ⟺ 等价于循环左移一位
+        const A = 2 * dx, B = 2 * dy, C = cs[j] - ci;
+        let allIn = true;
+        for (let v = 0; v < poly.length; v++) {
+          const p = poly[v];
+          if (A * p.x + B * p.y - C >= 0) { allIn = false; break; }
+        }
+        if (allIn) {
+          rot++;
+          continue;
+        }
+        if (rot > 0) {
+          poly = rotateBy(poly, rot);
+          rot = 0;
+        }
+        poly = this.clipHalfPlane(poly, A, B, C);
+        rCurSq = maxDistSqFrom(poly, xi, yi);
+      }
+      if (rot > 0) {
+        poly = rotateBy(poly, rot);
+      }
+      cells.push(poly);
+    }
+    return cells;
+  }
+
+  // 测试专用参考实现：无剪枝的全量 O(N²) 裁剪，
+  // 作为上面优化 computeCells 输出等价性的对照（勿在游戏路径调用）
+  static computeCellsReference(seeds, bounds) {
+    const cells = [];
+    const rect = [
+      { x: bounds.x, y: bounds.y },
+      { x: bounds.x + bounds.width, y: bounds.y },
+      { x: bounds.x + bounds.width, y: bounds.y + bounds.height },
+      { x: bounds.x, y: bounds.y + bounds.height }
+    ];
+    const clip = this.prototype.clipHalfPlane;
     for (let i = 0; i < seeds.length; i++) {
       let poly = rect;
       const wi = seeds[i].r * seeds[i].r;
@@ -177,38 +258,34 @@ export default class BubbleGenerator {
         const B = 2 * (seeds[j].y - seeds[i].y);
         const C = (seeds[j].x * seeds[j].x + seeds[j].y * seeds[j].y - wj)
                 - (seeds[i].x * seeds[i].x + seeds[i].y * seeds[i].y - wi);
-        poly = this.clipHalfPlane(poly, A, B, C);
+        poly = clip(poly, A, B, C);
       }
       cells.push(poly);
     }
     return cells;
   }
 
-  // Sutherland–Hodgman 半平面裁剪：保留 A*x + B*y <= C 一侧（不修改入参）
+  // Sutherland–Hodgman 半平面裁剪：保留 A*x + B*y <= C 一侧
+  // （不修改入参；不依赖 this、无闭包，交集算术与旧 edgeIntersection 逐位一致）
   clipHalfPlane(poly, A, B, C) {
     const out = [];
     const n = poly.length;
-    const f = p => A * p.x + B * p.y - C;
     for (let i = 0; i < n; i++) {
       const cur = poly[i];
       const nxt = poly[(i + 1) % n];
-      const fc = f(cur);
-      const fn = f(nxt);
+      const fc = A * cur.x + B * cur.y - C;
+      const fn = A * nxt.x + B * nxt.y - C;
       if (fc <= 0 && fn <= 0) {
         out.push(nxt);
       } else if (fc <= 0 && fn > 0) {
-        out.push(this.edgeIntersection(cur, nxt, fc, fn));
+        const t = fc / (fc - fn);
+        out.push({ x: cur.x + t * (nxt.x - cur.x), y: cur.y + t * (nxt.y - cur.y) });
       } else if (fc > 0 && fn <= 0) {
-        out.push(this.edgeIntersection(cur, nxt, fc, fn));
-        out.push(nxt);
+        const t = fc / (fc - fn);
+        out.push({ x: cur.x + t * (nxt.x - cur.x), y: cur.y + t * (nxt.y - cur.y) }, nxt);
       }
     }
     return dedupeVertices(out);
-  }
-
-  edgeIntersection(p, q, fp, fq) {
-    const t = fp / (fp - fq);
-    return { x: p.x + t * (q.x - p.x), y: p.y + t * (q.y - p.y) };
   }
 
   // 多边形面积质心（比顶点平均更"居中"，用于 Lloyd 松弛）
@@ -278,4 +355,27 @@ function minBBoxSide(poly) {
     if (v.y > maxY) maxY = v.y;
   }
   return Math.min(maxX - minX, maxY - minY);
+}
+
+// 循环左移 k 位：被安全跳过的空操作裁剪在全量实现中恰为左移一位
+function rotateBy(poly, k) {
+  const n = poly.length;
+  if (n < 2) return poly;
+  const s = ((k % n) + n) % n;
+  if (s === 0) return poly;
+  const out = new Array(n);
+  for (let i = 0; i < n; i++) out[i] = poly[(i + s) % n];
+  return out;
+}
+
+// 顶点到 (x, y) 的最远距离²（安全跳过裁剪的保守界）
+function maxDistSqFrom(poly, x, y) {
+  let m = 0;
+  for (let i = 0; i < poly.length; i++) {
+    const dx = poly[i].x - x;
+    const dy = poly[i].y - y;
+    const dSq = dx * dx + dy * dy;
+    if (dSq > m) m = dSq;
+  }
+  return m;
 }

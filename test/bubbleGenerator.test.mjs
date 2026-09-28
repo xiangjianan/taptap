@@ -3,7 +3,7 @@
  * Run: node test/bubbleGenerator.test.mjs
  */
 
-import BubbleGenerator from '../js/bubbleGenerator.js';
+import BubbleGenerator, { mulberry32 } from '../js/bubbleGenerator.js';
 
 const WIDTH = 375;
 const HEIGHT = 812;
@@ -170,6 +170,26 @@ assert(sweepOk, '15 个种子 × {10,60,100}：数量恒等于请求值且每格
 
 assertEqual(makeGenerator().generatePolygons(1, 'normal', SEED).length, 1, 'count=1 返回 1 格');
 assertEqual(makeGenerator().generatePolygons(2, 'normal', SEED).length, 2, 'count=2 返回 2 格');
+
+// ── 剪枝等价性（优化 computeCells vs 全量参考实现） ──
+console.log('\n剪枝等价性:');
+
+for (const [w, h] of [[375, 812], [320, 568]]) {
+  for (const n of [10, 60, 100]) {
+    let allEqual = true;
+    for (let s = 1; s <= 5; s++) {
+      const gen = new BubbleGenerator(w, h, { safeArea: { top: 44, bottom: 34, left: 0, right: 0 } });
+      const rng = mulberry32(SEED + s * 7919);
+      const cellBounds = gen.computeBounds();
+      const range = gen.sizeRangeFor(n, 1);
+      const seeds = gen.placeSeeds(cellBounds, n, range.rMin, range.rMax, rng);
+      const fast = gen.computeCells(seeds, cellBounds);
+      const ref = BubbleGenerator.computeCellsReference(seeds, cellBounds);
+      if (JSON.stringify(fast) !== JSON.stringify(ref)) allEqual = false;
+    }
+    assert(allEqual, `${w}×${h} N=${n}：剪枝结果与全量参考逐顶点一致`);
+  }
+}
 
 // ── Summary ──
 console.log(`\n${'='.repeat(40)}`);
