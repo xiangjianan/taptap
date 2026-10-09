@@ -106,7 +106,6 @@ export default class FindGameMain {
 
     // 情绪化计时器视觉效果
     this.vignetteIntensity = 0;       // 当前暗角强度 (0~1)，平滑过渡
-    this.calmFlowPhase = 0;           // 安心流动相位
 
     this.soundManager.init();
     this.scoreManager.init();
@@ -241,6 +240,8 @@ export default class FindGameMain {
   setupEventListeners() {
     let touchStartPos = null;
     let touchMoved = false;
+    let lastTouchEnd = -Infinity;
+    let suppressHomeClick = false;
 
     const isScrollable = () => this.ui.showSkills || this.ui.showShop || this.ui.showAchievements || this.ui.showScoreHistory;
 
@@ -265,8 +266,7 @@ export default class FindGameMain {
           this.ui.handleScoreHistoryTouchStart(y);
         } else {
           this.ui.handleTouchStart(y);
-          // 非滚动场景立即响应点击
-          this.handleInput(x, y);
+          if (!this.ui.beginHomePress(x, y)) this.handleInput(x, y);
         }
       } catch (error) {
         // 静默处理错误
@@ -307,8 +307,11 @@ export default class FindGameMain {
 
     const handleTouchEnd = (res) => {
       try {
+        lastTouchEnd = Date.now();
+        const release = res.changedTouches?.[0];
+        if (this.ui.homePress) this.ui.releaseHomePress(release ? release.clientX : this.ui.mouseX, release ? release.clientY : this.ui.mouseY);
         // 滚动面板场景：touchend 时判断是否为点击
-        if (isScrollable() && touchStartPos && !touchMoved) {
+        else if (isScrollable() && touchStartPos && !touchMoved) {
           this.handleInput(touchStartPos.x, touchStartPos.y);
         }
         touchStartPos = null;
@@ -331,6 +334,7 @@ export default class FindGameMain {
       wx.onTouchStart(handleTouchStart);
       wx.onTouchMove(handleTouchMove);
       wx.onTouchEnd(handleTouchEnd);
+      if (typeof wx.onTouchCancel === 'function') wx.onTouchCancel(() => { this.ui.cancelHomePress(); touchStartPos = null; });
     } else {
       if (!canvas || typeof canvas.addEventListener !== 'function') return;
       
@@ -359,8 +363,7 @@ export default class FindGameMain {
             this.ui.handleScoreHistoryTouchStart(y);
           } else {
             this.ui.handleTouchStart(y);
-            // 非滚动场景立即响应点击
-            this.handleInput(x, y);
+            if (!this.ui.beginHomePress(x, y)) this.handleInput(x, y);
           }
         } catch (error) {
           // 静默处理错误
@@ -402,8 +405,13 @@ export default class FindGameMain {
 
       const handleTouchEndEvent = (e) => {
         try {
+          e.preventDefault();
+          lastTouchEnd = Date.now();
+          const release = e.changedTouches?.[0];
+          const rect = canvas.getBoundingClientRect();
+          if (this.ui.homePress) this.ui.releaseHomePress(release ? release.clientX - rect.left : this.ui.mouseX, release ? release.clientY - rect.top : this.ui.mouseY);
           // 滚动面板场景：touchend 时判断是否为点击
-          if (isScrollable() && touchStartPos && !touchMoved) {
+          else if (isScrollable() && touchStartPos && !touchMoved) {
             this.handleInput(touchStartPos.x, touchStartPos.y);
           }
           touchStartPos = null;
@@ -428,7 +436,12 @@ export default class FindGameMain {
           
           this.ui.updateMousePosition(x, y);
           
-          if (e.type === 'click') {
+          if (e.type === 'mousedown' && e.button === 0) {
+            suppressHomeClick = this.ui.beginHomePress(x, y);
+          } else if (e.type === 'mouseup' && e.button === 0) {
+            this.ui.releaseHomePress(x, y);
+          } else if (e.type === 'click') {
+            if (suppressHomeClick || Date.now() - lastTouchEnd < 500) { suppressHomeClick = false; return; }
             this.handleInput(x, y);
           }
         } catch (error) {
@@ -458,6 +471,10 @@ export default class FindGameMain {
       canvas.addEventListener('touchstart', handleTouch, { passive: false });
       canvas.addEventListener('touchmove', handleTouchMoveEvent, { passive: false });
       canvas.addEventListener('touchend', handleTouchEndEvent, { passive: false });
+      canvas.addEventListener('touchcancel', () => { this.ui.cancelHomePress(); touchStartPos = null; });
+      canvas.addEventListener('mousedown', handleMouse);
+      window.addEventListener('mouseup', handleMouse);
+      window.addEventListener('blur', () => this.ui.cancelHomePress());
       canvas.addEventListener('mousemove', handleMouse);
       canvas.addEventListener('click', handleMouse);
       canvas.addEventListener('wheel', handleWheel, { passive: false });
@@ -557,12 +574,12 @@ export default class FindGameMain {
       this.vibrationManager.vibrateError();
       if (this.gameManager.isTimedMode()) {
         if (penalty > 0) {
-          this.ui.showFloatingText(center.x, center.y, `-${penalty}秒`, getColorScheme().danger, 'tap');
+          this.ui.showFloatingText(center.x, center.y, `-${penalty}秒`, '#EF4444', 'tap');
         } else {
-          this.ui.showFloatingText(center.x, center.y, '错误', getColorScheme().danger, 'tap');
+          this.ui.showFloatingText(center.x, center.y, '错误', '#EF4444', 'tap');
         }
       } else {
-        this.ui.showFloatingText(center.x, center.y, '错误', getColorScheme().danger, 'tap');
+        this.ui.showFloatingText(center.x, center.y, '错误', '#EF4444', 'tap');
       }
     };
     
@@ -577,13 +594,13 @@ export default class FindGameMain {
 
       if (this.gameManager.isTimedMode()) {
         if (timeReward > 0) {
-          this.ui.showFloatingText(center.x, center.y, `+${timeReward}秒`, getColorScheme().primary, 'tap');
+          this.ui.showFloatingText(center.x, center.y, `+${timeReward}秒`, '#FBBF24', 'tap');
         }
       } else {
         if (comboCount > 3) {
-          this.ui.showFloatingText(center.x, center.y, `正确 ${comboCount}连击`, getColorScheme().primary, 'tap');
+          this.ui.showFloatingText(center.x, center.y, `正确 ${comboCount}连击`, '#FBBF24', 'tap');
         } else {
-          this.ui.showFloatingText(center.x, center.y, '正确', getColorScheme().primary, 'tap');
+          this.ui.showFloatingText(center.x, center.y, '正确', '#FBBF24', 'tap');
         }
       }
     };
@@ -885,7 +902,6 @@ export default class FindGameMain {
     }
 
     const phase = bgState.phase;
-    const t = Date.now() / 1000;
 
     // Flowing gradient based on combo intensity
     const baseColors = ['#FFFAF5', '#FFF3E8', '#FFF7F0'];
@@ -930,21 +946,6 @@ export default class FindGameMain {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-    // Subtle radial pulse at high combo
-    if (intensity >= 1) {
-      const pulseAlpha = (intensity - 1) * 0.08 * (0.7 + Math.sin(t * 3) * 0.3);
-      const comboColor = bgState.comboLevel ? bgState.comboLevel.color : '#FBBF24';
-      const [pr, pg, pb] = hexToRgb(comboColor);
-      const radial = ctx.createRadialGradient(
-        SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 0,
-        SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) * 0.6
-      );
-      radial.addColorStop(0, `rgba(${pr}, ${pg}, ${pb}, ${pulseAlpha})`);
-      radial.addColorStop(1, `rgba(${pr}, ${pg}, ${pb}, 0)`);
-      ctx.fillStyle = radial;
-      ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    }
-
     // Background particles
     const particles = bgState.particles;
     for (const p of particles) {
@@ -983,10 +984,7 @@ export default class FindGameMain {
         this.vignetteIntensity = Math.max(0, this.vignetteIntensity - deltaTime * 2);
       }
 
-      // --- 安心流动 ---
-      if (timeLeft > 10) {
-        this.calmFlowPhase += deltaTime * 0.8;
-      }
+
     }
 
     // 绘制危险暗角
@@ -1012,26 +1010,6 @@ export default class FindGameMain {
       }
     }
 
-    // 绘制安心流动
-    if (gm.gameState === 'playing' && gm.gameMode === 'timed' && gm.timeLeft > 10) {
-      const phase = this.calmFlowPhase;
-      const breathAlpha = 0.025 + Math.sin(phase) * 0.015;
-      const cx = SCREEN_WIDTH / 2;
-      const cy = SCREEN_HEIGHT / 2;
-      const r = Math.max(SCREEN_WIDTH, SCREEN_HEIGHT) * 0.7;
-
-      const calm = ctx.createRadialGradient(
-        cx + Math.sin(phase * 0.6) * 40,
-        cy + Math.cos(phase * 0.4) * 30,
-        0,
-        cx, cy, r
-      );
-      calm.addColorStop(0, `rgba(134, 239, 172, ${breathAlpha})`);
-      calm.addColorStop(0.5, `rgba(253, 230, 138, ${breathAlpha * 0.6})`);
-      calm.addColorStop(1, 'rgba(0, 0, 0, 0)');
-      ctx.fillStyle = calm;
-      ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    }
   }
 
   renderGameAreaBorder(ctx) {

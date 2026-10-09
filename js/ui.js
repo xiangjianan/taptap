@@ -39,6 +39,7 @@ export default class UI {
     this.tapFeedback = new TapEffects();
     this.feedbackPoint = null;
     this.feedbackTriggered = false;
+    this.homePress = null;
     this.coinFlyAnimations = [];
     this.coinBoxBounce = 0;
     this.flashAlpha = 0;
@@ -1034,28 +1035,10 @@ export default class UI {
       ctx.save();
       ctx.globalAlpha = ft.alpha;
       ctx.fillStyle = ft.color;
+      ctx.font = 'bold 32px "Arial Black", Arial, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      if (ft.source === 'tap') {
-        const elapsed = (1 - ft.life) / 1.5;
-        // Snap up from 75%, overshoot, then settle.
-        const scale = this.reducedMotion ? 1 : 1 - 0.25 * Math.exp(-elapsed * 18) * Math.cos(elapsed * 30);
-        const size = this.width < 768 ? 23 : 28;
-        ctx.font = `900 ${size}px "Arial Black", Arial, sans-serif`;
-        const halfWidth = ctx.measureText(ft.text).width * 1.25 / 2 + 10;
-        const x = Math.max(halfWidth, Math.min(this.width - halfWidth, ft.x));
-        const y = Math.max(this.safeArea.top + 30, ft.y + ft.offsetY - 12);
-        ctx.translate(x, y);
-        ctx.scale(scale, scale);
-        ctx.strokeStyle = '#FFFAF5';
-        ctx.lineWidth = 4;
-        ctx.lineJoin = 'round';
-        ctx.strokeText(ft.text, 0, 0);
-        ctx.fillText(ft.text, 0, 0);
-      } else {
-        ctx.font = 'bold 32px "Arial Black", Arial, sans-serif';
-        ctx.fillText(ft.text, ft.x, ft.y + ft.offsetY);
-      }
+      ctx.fillText(ft.text, ft.x, ft.y + ft.offsetY);
       ctx.restore();
     }
 
@@ -1170,6 +1153,7 @@ export default class UI {
   }
 
   initMenu() {
+    this.cancelHomePress();
     this.floatingTexts = this.floatingTexts.filter(text => text.source !== 'tap');
     this.isPaused = false;
     this.comboParticles = [];
@@ -1318,6 +1302,7 @@ export default class UI {
   }
 
   initGame() {
+    this.cancelHomePress();
     this.isPaused = false;
     this.bgComboIntensity = 0;
     this.bgParticles = [];
@@ -1439,12 +1424,36 @@ export default class UI {
     ];
   }
 
-  playClickFeedback() {
+  beginHomePress(x, y) {
+    if (this.gameState !== 'menu' || this.hasForegroundPanel() || this.eggTriggered || this.clickedButton) return false;
+    const button = this.buttons.find(button => this.isPointInButton(x, y, button));
+    const segment = this.isPointInModeSwitcher(x, y);
+    this.homePress = { button, segment };
+    this.modeSwitcher.clickedSegment = segment;
+    return true;
+  }
+
+  releaseHomePress(x, y) {
+    if (!this.homePress) return false;
+    const { button, segment } = this.homePress;
+    this.cancelHomePress();
+    if (this.gameState !== 'menu' || this.hasForegroundPanel()) return true;
+    if ((button && this.buttons.includes(button) && this.isPointInButton(x, y, button)) ||
+        (segment && this.isPointInModeSwitcher(x, y) === segment)) this.handleClick(x, y);
+    return true;
+  }
+
+  cancelHomePress() {
+    this.homePress = null;
+    this.modeSwitcher.clickedSegment = null;
+  }
+
+  playClickFeedback(playSound = true) {
     if (this.feedbackPoint && !this.feedbackTriggered) {
       this.tapFeedback.emitContact(this.feedbackPoint, 'ui', this.clickedButton);
       this.feedbackTriggered = true;
     }
-    if (this.onPlayClickSound) this.onPlayClickSound();
+    if (playSound && this.onPlayClickSound) this.onPlayClickSound();
   }
 
   handleClick(x, y) {
@@ -2082,7 +2091,7 @@ export default class UI {
       button.height = buttonHeight;
 
       const isHovered = this.hoveredButton === button.id;
-      const isClicked = this.clickedButton === button.id;
+      const isClicked = this.clickedButton === button.id || (this.homePress?.button === button && this.isPointInButton(this.mouseX, this.mouseY, button));
 
       let fillColor;
       if (button.id === 'nextLevel' || button.id === 'restart') {
@@ -2531,7 +2540,7 @@ export default class UI {
     
     this.headerButtons.forEach(button => {
       const isHovered = this.isPointInButton(this.mouseX, this.mouseY, button);
-      const isClicked = this.clickedButton === button.id;
+      const isClicked = this.clickedButton === button.id || (this.homePress?.button === button && this.isPointInButton(this.mouseX, this.mouseY, button));
       
       let scale = 1;
       if (isHovered) scale = 1.05;
@@ -3594,31 +3603,9 @@ export default class UI {
     this.comboData.level = null;
   }
 
-  createComboParticles(level, count, center) {
-    if (this.reducedMotion) return;
-    const particleCount = Math.min(count || 5, 15);
-    const color = level ? level.color : '#FBBF24';
-    const originX = center ? center.x : this.width / 2;
-    const originY = center ? center.y : this.height / 3;
-
-    // 限制最大粒子数量
-    const maxParticles = 50;
-    if (this.comboParticles.length >= maxParticles) {
-      this.comboParticles.splice(0, particleCount);
-    }
-
-    for (let i = 0; i < particleCount; i++) {
-      this.comboParticles.push({
-        x: originX + (Math.random() - 0.5) * 30,
-        y: originY + (Math.random() - 0.5) * 30,
-        vx: (Math.random() - 0.5) * 12,
-        vy: (Math.random() - 0.5) * 12 - 3,
-        size: Math.random() * 10 + 5,
-        color: color,
-        alpha: 1,
-        life: 1
-      });
-    }
+  createComboParticles() {
+    // Click and combo particle bursts are disabled.
+    this.comboParticles = [];
   }
 
   showCoinFlyEffect(amount, center) {
@@ -3900,7 +3887,7 @@ export default class UI {
     for (let i = 0; i < this.buttons.length; i++) {
       const button = this.buttons[i];
       const isHovered = this.hoveredButton === button.id;
-      const isClicked = this.clickedButton === button.id;
+      const isClicked = this.clickedButton === button.id || (this.homePress?.button === button && this.isPointInButton(this.mouseX, this.mouseY, button));
       
       const delay = i * 0.08;
       const alpha = Math.min(1, Math.max(0, (this.menuAnimation - delay) * 3));
@@ -5143,6 +5130,8 @@ export default class UI {
               if (skill.canUnlock && !skill.isUnlocked) {
                 this.clickedButton = `skill_unlock_${skill.id}`;
                 this.clickAnimation = 1;
+                // Unlock result owns the audio; this immediate feedback is visual only.
+                this.playClickFeedback(false);
                 setTimeout(() => {
                   this.clickedButton = null;
                   this.clickAnimation = 0;

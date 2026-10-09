@@ -39,7 +39,7 @@ assert.equal(effects.trails.length, 0);
 assert.equal(effects.getButtonScale('start'), 1);
 const polygon = new Polygon([{ x: 0, y: 0 }, { x: 40, y: 0 }, { x: 20, y: 40 }], 1);
 polygon.playSuccess(20);
-assert.equal(polygon.getSuccessPulse(), 0);
+assert.equal(polygon.getEdgeBulge(), 0);
 polygon.shake();
 assert.equal(polygon.shakeTime, 0);
 delete globalThis.window;

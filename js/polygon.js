@@ -59,7 +59,6 @@ export default class Polygon {
     this.shakeOffset = { x: 0, y: 0 };
     this.shakeTime = 0;
     this.successTime = 0;
-    this.successPower = 1;
     this.isHinted = false;
     this.hintPulse = 0;
     this.hintGlowIntensity = 0;
@@ -135,21 +134,13 @@ export default class Polygon {
     }
   }
 
-  playSuccess(comboCount = 1) {
-    this.successTime = 0.36;
-    this.successPower = 1 + Math.min(comboCount, 20) / 40;
+  playSuccess() {
+    this.successTime = 0;
     this.isError = false;
     this.errorAlpha = 0;
     this.shakeTime = 0;
     this.shakeOffset.x = 0;
     this.shakeOffset.y = 0;
-  }
-
-  getSuccessPulse() {
-    if (this.reducedMotion || this.successTime <= 0) return 0;
-    const t = 1 - this.successTime / 0.36;
-    // Immediate compression, strong rebound, then a small settling bounce.
-    return -Math.cos(t * Math.PI * 3) * (1 - t) ** 2 * this.successPower;
   }
 
   shake() {
@@ -214,6 +205,17 @@ export default class Polygon {
     };
   }
 
+  getEdgeBulge() {
+    return 0;
+  }
+
+  traceShape(ctx) {
+    ctx.beginPath();
+    ctx.moveTo(this.vertices[0].x, this.vertices[0].y);
+    for (let i = 1; i < this.vertices.length; i++) ctx.lineTo(this.vertices[i].x, this.vertices[i].y);
+    ctx.closePath();
+  }
+
   renderShape(ctx, appearance = null) {
     const scheme = getCachedScheme();
     const stateColors = cachedStateColors;
@@ -224,15 +226,11 @@ export default class Polygon {
     
     ctx.save();
     ctx.translate(transformX, transformY);
-    const pulse = this.getSuccessPulse();
     const scale = this.reducedMotion ? 1 : this.scale;
-    ctx.scale(scale * (1 + pulse * 0.13), scale * (1 - pulse * 0.09));
+    ctx.scale(scale, scale);
     ctx.translate(-center.x, -center.y);
 
-    if (this.successTime > 0) {
-      ctx.shadowColor = scheme.buttonSuccess;
-      ctx.shadowBlur = 18 * this.successTime / 0.36;
-    } else if (this.isHinted) {
+    if (this.isHinted) {
       ctx.shadowColor = scheme.accent;
       ctx.shadowBlur = 25 * this.hintGlowIntensity;
     } else if (this.isEagleEyeHighlighted) {
@@ -240,12 +238,7 @@ export default class Polygon {
       ctx.shadowBlur = 25 * this.eagleEyeGlowIntensity;
     }
 
-    ctx.beginPath();
-    ctx.moveTo(this.vertices[0].x, this.vertices[0].y);
-    for (let i = 1; i < this.vertices.length; i++) {
-      ctx.lineTo(this.vertices[i].x, this.vertices[i].y);
-    }
-    ctx.closePath();
+    this.traceShape(ctx);
 
     let fillColor;
     if (this.isClicked) {
@@ -264,11 +257,6 @@ export default class Polygon {
     ctx.fillStyle = fillColor;
     ctx.fill();
 
-    if (this.successTime > 0.23) {
-      ctx.fillStyle = `rgba(167, 243, 208, ${(this.successTime - 0.23) / 0.13 * 0.65})`;
-      ctx.fill();
-    }
-
     if (this.isError) {
       ctx.fillStyle = `rgba(239, 68, 68, ${this.errorAlpha})`;
       ctx.fill();
@@ -283,11 +271,7 @@ export default class Polygon {
     ctx.lineJoin = 'miter';
     ctx.stroke();
 
-    if (this.successTime > 0) {
-      ctx.strokeStyle = `rgba(255, 255, 255, ${this.successTime / 0.36})`;
-      ctx.lineWidth = 3;
-      ctx.stroke();
-    } else if (this.isHinted) {
+    if (this.isHinted) {
       ctx.strokeStyle = `rgba(16, 185, 129, ${0.5 + this.hintGlowIntensity * 0.5})`;
       ctx.lineWidth = 3;
       ctx.stroke();
@@ -330,9 +314,8 @@ export default class Polygon {
     // 保存变换，避免弹性缩放累积到后续数字
     ctx.save();
     ctx.translate(transformX, transformY);
-    const pulse = this.getSuccessPulse();
     const scale = this.reducedMotion ? 1 : this.scale;
-    ctx.scale(scale * (1 + pulse * 0.13), scale * (1 - pulse * 0.09));
+    ctx.scale(scale, scale);
     ctx.translate(-center.x, -center.y);
 
     const baseFontSize = Math.max(16, Math.min(28, Math.sqrt(this.getArea()) / 3.2));
