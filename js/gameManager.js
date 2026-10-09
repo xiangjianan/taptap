@@ -2,6 +2,7 @@ import BubbleGenerator from './bubbleGenerator.js';
 import { SAFE_AREA } from './render';
 import ComboManager from './comboManager';
 import EggManager from './eggManager';
+import TapEffects from './tapEffects.js';
 
 export default class GameManager {
   constructor(width, height) {
@@ -11,6 +12,7 @@ export default class GameManager {
     this.comboManager = new ComboManager();
     this.eggManager = new EggManager();
     this.polygons = [];
+    this.tapEffects = new TapEffects();
     this.currentNumber = 1;
     this.totalNumbers = 0;
     this.gameState = 'menu';
@@ -22,6 +24,7 @@ export default class GameManager {
     this.onGameComplete = null;
     this.onError = null;
     this.onCorrectClick = null;
+    this.onNeutralTap = null;
     this.onComboUpdate = null;
     this.onComboLevelUp = null;
     this.onComboBreak = null;
@@ -84,9 +87,12 @@ export default class GameManager {
     this.polygonCount = count;
     this.currentLevel = level;
     this.gameMode = gameMode;
+    this.isPaused = false;
+    this.pauseStartTime = 0;
     this.polygons = this.generator.generatePolygons(count, 'normal');
     this.currentNumber = 1;
     // 以实际返回的格子数为准（生成器对极端 count 有容量钳制）
+    this.tapEffects.reset();
     this.totalNumbers = this.polygons.length;
     this.gameState = 'playing';
     this.startTime = Date.now();
@@ -120,14 +126,22 @@ export default class GameManager {
   }
 
   handleClick(x, y) {
-    if (this.gameState !== 'playing') return;
+    if (this.gameState !== 'playing' || this.isPaused) return;
 
+    // Match the board's camera transform during impact shake.
+    x -= this.tapEffects.offset.x;
+    y -= this.tapEffects.offset.y;
     for (const polygon of this.polygons) {
-      if (!polygon.isClicked && polygon.containsPoint({ x, y })) {
+      if (polygon.containsPoint({ x, y })) {
+        if (polygon.isClicked) {
+          this.tapEffects.emitContact({ x, y }, 'repeat');
+          if (this.onNeutralTap) this.onNeutralTap();
+          return;
+        }
         if (polygon.number === this.currentNumber) {
-          this.handleCorrectClick(polygon);
+          this.handleCorrectClick(polygon, { x, y });
         } else {
-          this.handleWrongClick(polygon);
+          this.handleWrongClick(polygon, { x, y });
         }
 
         const triggeredEgg = this.eggManager.checkClick(
@@ -146,9 +160,13 @@ export default class GameManager {
         return;
       }
     }
+    const bounds = this.getBoardBounds();
+    if (x >= bounds.x && x <= bounds.x + bounds.width && y >= bounds.y && y <= bounds.y + bounds.height) {
+      this.tapEffects.emitContact({ x, y });
+    }
   }
 
-  handleCorrectClick(polygon) {
+  handleCorrectClick(polygon, point = polygon.getCenter()) {
     // 如果当前多边形有鹰眼高亮，立即取消并清除定时器
     if (polygon.isEagleEyeHighlighted) {
       polygon.setEagleEyeHighlight(false);
@@ -159,11 +177,8 @@ export default class GameManager {
     }
 
     polygon.isClicked = true;
-    polygon.highlight();
-
-    setTimeout(() => {
-      polygon.resetHighlight();
-    }, 200);
+    // The dt-driven success impulse owns the whole visual lifecycle.
+    polygon.resetHighlight();
 
     if (this.hintedPolygon === polygon) {
       this.clearHint();
@@ -199,6 +214,8 @@ export default class GameManager {
 
     const comboLevel = this.comboManager.onCorrectClick();
     const comboCount = this.comboManager.getComboCount();
+    polygon.playSuccess(comboCount);
+    this.tapEffects.emit(point, comboCount);
 
     // 计算实际加时秒数
     let timeReward = 0;
@@ -237,8 +254,9 @@ export default class GameManager {
     }
   }
 
-  handleWrongClick(polygon) {
+  handleWrongClick(polygon, point = polygon.getCenter()) {
     polygon.shake();
+    this.tapEffects.emit(point, 0, true);
     this.errorCount++;
     this.clickCount++;
     
@@ -277,6 +295,7 @@ export default class GameManager {
   }
 
   reset() {
+    this.tapEffects.reset();
     this.stopTimer();
     this.polygons = [];
     this.currentNumber = 1;
@@ -331,9 +350,12 @@ export default class GameManager {
     this.eggManager = eggManager;
   }
 
-  update(_deltaTime) {
+  update(deltaTime = 0.016) {
+    if (this.isPaused) return;
+    if (this.gameState === 'menu') this.tapEffects.reset();
+    this.tapEffects.update(deltaTime);
     for (const polygon of this.polygons) {
-      polygon.update();
+      polygon.update(deltaTime);
     }
     
     // 注意：倒计时由 setInterval 在 updateTimer() 中管理
@@ -354,8 +376,7 @@ export default class GameManager {
     }
   }
 
-  render(ctx) {
-    // 裁剪到圆角矩形区域，使外层大矩形有圆角效果
+  getBoardBounds() {
     const safeArea = this.generator.safeArea;
     const isMobile = this.width < 768;
     const topSafeArea = Math.max(safeArea.top, isMobile ? 44 : 0);
@@ -368,6 +389,12 @@ export default class GameManager {
     const clipW = this.width - borderPadding * 2;
     const clipH = this.height - headerHeight - footerHeight - borderPadding * 2;
     const clipRadius = 10;
+
+    return { x: clipX, y: clipY, width: clipW, height: clipH, radius: clipRadius };
+  }
+
+  render(ctx) {
+    const { x: clipX, y: clipY, width: clipW, height: clipH, radius: clipRadius } = this.getBoardBounds();
 
     ctx.save();
     ctx.beginPath();
@@ -383,18 +410,23 @@ export default class GameManager {
     ctx.closePath();
     ctx.clip();
 
-    // 不透明背景，遮挡连击流动效果
+    // Restore the original warm, opaque number board.
     ctx.fillStyle = '#FFFAF5';
     ctx.fillRect(clipX, clipY, clipW, clipH);
 
+    ctx.save();
+    ctx.translate(this.tapEffects.offset.x, this.tapEffects.offset.y);
     // 先绘制所有多边形的形状（底层）
     for (const polygon of this.polygons) {
       polygon.renderShape(ctx);
     }
+    this.tapEffects.render(ctx);
     // 再绘制所有文字（顶层），确保文字不被其他图形的线条遮挡
     for (const polygon of this.polygons) {
       polygon.renderText(ctx);
     }
+    ctx.restore();
+    this.tapEffects.renderAccents(ctx, { x: clipX, y: clipY, width: clipW, height: clipH });
 
     ctx.restore();
   }

@@ -1,4 +1,5 @@
 import { COLORS, getColorScheme, BRUTALISM_STYLES } from './constants/colors.js';
+import { prefersReducedMotion } from './visualTheme.js';
 
 // 缓存颜色方案，避免每帧重复计算
 let cachedScheme = null;
@@ -43,6 +44,7 @@ export default class Polygon {
   }
 
   constructor(vertices, number, color) {
+    this.reducedMotion = prefersReducedMotion();
     this.vertices = vertices;
     this.number = number;
     this.color = color;
@@ -56,6 +58,8 @@ export default class Polygon {
     this.targetScale = 1;
     this.shakeOffset = { x: 0, y: 0 };
     this.shakeTime = 0;
+    this.successTime = 0;
+    this.successPower = 1;
     this.isHinted = false;
     this.hintPulse = 0;
     this.hintGlowIntensity = 0;
@@ -131,8 +135,25 @@ export default class Polygon {
     }
   }
 
+  playSuccess(comboCount = 1) {
+    this.successTime = 0.36;
+    this.successPower = 1 + Math.min(comboCount, 20) / 40;
+    this.isError = false;
+    this.errorAlpha = 0;
+    this.shakeTime = 0;
+    this.shakeOffset.x = 0;
+    this.shakeOffset.y = 0;
+  }
+
+  getSuccessPulse() {
+    if (this.reducedMotion || this.successTime <= 0) return 0;
+    const t = 1 - this.successTime / 0.36;
+    // Immediate compression, strong rebound, then a small settling bounce.
+    return -Math.cos(t * Math.PI * 3) * (1 - t) ** 2 * this.successPower;
+  }
+
   shake() {
-    this.shakeTime = 10;
+    this.shakeTime = this.reducedMotion ? 0 : 10;
     this.isError = true;
     this.errorAlpha = 0.8;
   }
@@ -145,20 +166,22 @@ export default class Polygon {
     }
   }
 
-  update() {
-    this.scale += (this.targetScale - this.scale) * 0.2;
+  update(deltaTime = 1 / 60) {
+    const dt = Number.isFinite(deltaTime) ? Math.max(0, deltaTime) : 0;
+    this.successTime = Math.max(0, this.successTime - dt);
+    this.scale += (this.targetScale - this.scale) * (1 - Math.exp(-13.4 * dt));
     
     if (this.shakeTime > 0) {
-      this.shakeOffset.x = (Math.random() - 0.5) * 10;
-      this.shakeOffset.y = (Math.random() - 0.5) * 10;
-      this.shakeTime--;
+      this.shakeTime = Math.max(0, this.shakeTime - dt * 60);
+      this.shakeOffset.x = this.shakeTime > 0 ? Math.sin(this.shakeTime * 2.8) * 4 * (this.shakeTime / 10) : 0;
+      this.shakeOffset.y = 0;
     } else {
       this.shakeOffset.x = 0;
       this.shakeOffset.y = 0;
     }
 
     if (this.isError) {
-      this.errorAlpha -= 0.05;
+      this.errorAlpha -= dt * 3;
       if (this.errorAlpha <= 0) {
         this.errorAlpha = 0;
         this.isError = false;
@@ -166,7 +189,7 @@ export default class Polygon {
     }
 
     if (this.isHinted) {
-      this.hintPulse += 0.08;
+      this.hintPulse += dt * 4.8;
       this.hintGlowIntensity = 0.5 + Math.sin(this.hintPulse) * 0.5;
     } else {
       this.hintPulse = 0;
@@ -174,7 +197,7 @@ export default class Polygon {
     }
 
     if (this.isEagleEyeHighlighted) {
-      this.eagleEyePulse += 0.08;
+      this.eagleEyePulse += dt * 4.8;
       this.eagleEyeGlowIntensity = 0.5 + Math.sin(this.eagleEyePulse) * 0.5;
     } else {
       this.eagleEyePulse = 0;
@@ -191,7 +214,7 @@ export default class Polygon {
     };
   }
 
-  renderShape(ctx) {
+  renderShape(ctx, appearance = null) {
     const scheme = getCachedScheme();
     const stateColors = cachedStateColors;
     
@@ -201,14 +224,19 @@ export default class Polygon {
     
     ctx.save();
     ctx.translate(transformX, transformY);
-    ctx.scale(this.scale, this.scale);
+    const pulse = this.getSuccessPulse();
+    const scale = this.reducedMotion ? 1 : this.scale;
+    ctx.scale(scale * (1 + pulse * 0.13), scale * (1 - pulse * 0.09));
     ctx.translate(-center.x, -center.y);
 
-    if (this.isHinted) {
-      ctx.shadowColor = '#F97316';
+    if (this.successTime > 0) {
+      ctx.shadowColor = scheme.buttonSuccess;
+      ctx.shadowBlur = 18 * this.successTime / 0.36;
+    } else if (this.isHinted) {
+      ctx.shadowColor = scheme.accent;
       ctx.shadowBlur = 25 * this.hintGlowIntensity;
     } else if (this.isEagleEyeHighlighted) {
-      ctx.shadowColor = '#F97316';
+      ctx.shadowColor = scheme.accent;
       ctx.shadowBlur = 25 * this.eagleEyeGlowIntensity;
     }
 
@@ -221,20 +249,25 @@ export default class Polygon {
 
     let fillColor;
     if (this.isClicked) {
-      fillColor = stateColors.clicked;
+      fillColor = appearance ? appearance.clicked : stateColors.clicked;
     } else if (this.isEagleEyeHighlighted) {
-      fillColor = this.interpolateColor('#F97316', '#FDBA74', this.eagleEyeGlowIntensity);
+      fillColor = this.interpolateColor(scheme.accent, '#6EE7B7', this.eagleEyeGlowIntensity);
     } else if (this.isHinted) {
       const intensity = this.hintGlowIntensity;
-      fillColor = this.interpolateColor('#F97316', '#FDBA74', intensity);
+      fillColor = this.interpolateColor(scheme.accent, '#6EE7B7', intensity);
     } else if (this.isHighlighted) {
       fillColor = stateColors.highlighted;
     } else {
-      fillColor = scheme.cardBg;
+      fillColor = appearance ? appearance.cell : scheme.cardBg;
     }
     
     ctx.fillStyle = fillColor;
     ctx.fill();
+
+    if (this.successTime > 0.23) {
+      ctx.fillStyle = `rgba(167, 243, 208, ${(this.successTime - 0.23) / 0.13 * 0.65})`;
+      ctx.fill();
+    }
 
     if (this.isError) {
       ctx.fillStyle = `rgba(239, 68, 68, ${this.errorAlpha})`;
@@ -244,18 +277,22 @@ export default class Polygon {
     ctx.shadowBlur = 0;
     ctx.shadowColor = 'rgba(0, 0, 0, 0)';
 
-    ctx.strokeStyle = scheme.borderSubtle;
+    ctx.strokeStyle = appearance ? appearance.edge : scheme.borderSubtle;
     ctx.lineWidth = (this.isHinted || this.isEagleEyeHighlighted) ? 4 : 1.5;
     ctx.lineCap = 'square';
     ctx.lineJoin = 'miter';
     ctx.stroke();
 
-    if (this.isHinted) {
-      ctx.strokeStyle = `rgba(234, 138, 46, ${0.5 + this.hintGlowIntensity * 0.5})`;
+    if (this.successTime > 0) {
+      ctx.strokeStyle = `rgba(255, 255, 255, ${this.successTime / 0.36})`;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    } else if (this.isHinted) {
+      ctx.strokeStyle = `rgba(16, 185, 129, ${0.5 + this.hintGlowIntensity * 0.5})`;
       ctx.lineWidth = 3;
       ctx.stroke();
     } else if (this.isEagleEyeHighlighted) {
-      ctx.strokeStyle = `rgba(234, 138, 46, ${0.5 + this.eagleEyeGlowIntensity * 0.5})`;
+      ctx.strokeStyle = `rgba(16, 185, 129, ${0.5 + this.eagleEyeGlowIntensity * 0.5})`;
       ctx.lineWidth = 3;
       ctx.stroke();
     }
@@ -290,9 +327,12 @@ export default class Polygon {
     const transformX = center.x + this.shakeOffset.x;
     const transformY = center.y + this.shakeOffset.y;
     
-    // 使用局部变换而非save/restore
+    // 保存变换，避免弹性缩放累积到后续数字
+    ctx.save();
     ctx.translate(transformX, transformY);
-    ctx.scale(this.scale, this.scale);
+    const pulse = this.getSuccessPulse();
+    const scale = this.reducedMotion ? 1 : this.scale;
+    ctx.scale(scale * (1 + pulse * 0.13), scale * (1 - pulse * 0.09));
     ctx.translate(-center.x, -center.y);
 
     const baseFontSize = Math.max(16, Math.min(28, Math.sqrt(this.getArea()) / 3.2));
@@ -323,10 +363,7 @@ export default class Polygon {
     }
     ctx.fillText(text, center.x, center.y);
 
-    // 重置变换
-    ctx.translate(center.x, center.y);
-    ctx.scale(1 / this.scale, 1 / this.scale);
-    ctx.translate(-transformX, -transformY);
+    ctx.restore();
   }
 
   render(ctx) {

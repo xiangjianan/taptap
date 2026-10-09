@@ -483,6 +483,7 @@ export default class FindGameMain {
 
     this.ui.onPlayClickSound = () => {
       this.soundManager.playUiClick();
+      this.vibrationManager.vibrateShort();
     };
 
 
@@ -547,38 +548,42 @@ export default class FindGameMain {
       this.handleGameFailed();
     };
     
+    this.gameManager.onNeutralTap = () => {
+      this.soundManager.playUiClick();
+    };
+
     this.gameManager.onError = (center, penalty) => {
       this.soundManager.playError();
       this.vibrationManager.vibrateError();
       if (this.gameManager.isTimedMode()) {
         if (penalty > 0) {
-          this.ui.showFloatingText(center.x, center.y, `-${penalty}秒`, '#EF4444');
+          this.ui.showFloatingText(center.x, center.y, `-${penalty}秒`, getColorScheme().danger, 'tap');
         } else {
-          this.ui.showFloatingText(center.x, center.y, '错误', '#EF4444');
+          this.ui.showFloatingText(center.x, center.y, '错误', getColorScheme().danger, 'tap');
         }
       } else {
-        this.ui.showFloatingText(center.x, center.y, '错误', '#EF4444');
+        this.ui.showFloatingText(center.x, center.y, '错误', getColorScheme().danger, 'tap');
       }
     };
     
     this.gameManager.onCorrectClick = (center, comboLevel, timeReward) => {
       const comboCount = this.gameManager.getComboCount();
       this.soundManager.playClick(comboCount);
-      this.vibrationManager.vibrateCorrect();
-
-      if (comboLevel) {
-        this.vibrationManager.vibrateCombo(comboLevel.vibration);
+      // Level-up callback already sends the stronger haptic. Don't overwrite it
+      // with a light pulse or issue several conflicting requests in the same tap.
+      if (!comboLevel || comboCount !== comboLevel.threshold) {
+        this.vibrationManager.vibrateCorrect();
       }
 
       if (this.gameManager.isTimedMode()) {
         if (timeReward > 0) {
-          this.ui.showFloatingText(center.x, center.y, `+${timeReward}秒`, '#FBBF24');
+          this.ui.showFloatingText(center.x, center.y, `+${timeReward}秒`, getColorScheme().primary, 'tap');
         }
       } else {
         if (comboCount > 3) {
-          this.ui.showFloatingText(center.x, center.y, `正确 ${comboCount}连击`, '#FBBF24');
+          this.ui.showFloatingText(center.x, center.y, `正确 ${comboCount}连击`, getColorScheme().primary, 'tap');
         } else {
-          this.ui.showFloatingText(center.x, center.y, '正确', '#FBBF24');
+          this.ui.showFloatingText(center.x, center.y, '正确', getColorScheme().primary, 'tap');
         }
       }
     };
@@ -732,6 +737,7 @@ export default class FindGameMain {
     const mode = this.ui.getGameMode();
     this.vignetteIntensity = 0;
     this.gameManager.initGame(count, level, mode);
+    this.ui.initGame();
   }
 
   backToMenu() {
@@ -1035,27 +1041,19 @@ export default class FindGameMain {
       return;
     }
 
-    const isMobile = SCREEN_WIDTH < 768;
-    const safeArea = SAFE_AREA || { top: 0, bottom: 0, left: 0, right: 0 };
-    const topSafeArea = Math.max(safeArea.top, isMobile ? 44 : 0);
-    const bottomSafeArea = Math.max(safeArea.bottom, isMobile ? 34 : 0);
-    const headerHeight = isMobile ? Math.max(100, topSafeArea + 54) : 116;
-    const footerHeight = isMobile ? Math.max(80, bottomSafeArea + 44) : 56;
-    
-    const borderPadding = 10;
-    const borderX = borderPadding - 4;
-    const borderY = headerHeight + borderPadding - 4;
-    const borderWidth = SCREEN_WIDTH - borderPadding * 2 + 8;
-    const borderHeight = SCREEN_HEIGHT - headerHeight - footerHeight - borderPadding * 2 + 8;
-    const borderRadius = 18;
-    
+    const bounds = this.gameManager.getBoardBounds();
+    const borderX = bounds.x - 3;
+    const borderY = bounds.y - 3;
+    const borderWidth = bounds.width + 6;
+    const borderHeight = bounds.height + 6;
+    const borderRadius = bounds.radius + 3;
     ctx.strokeStyle = 'rgba(148, 163, 184, 0.2)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     this.drawRoundedRect(ctx, borderX, borderY, borderWidth, borderHeight, borderRadius);
     ctx.stroke();
 
-    ctx.strokeStyle = 'rgba(148, 163, 184, 0.1)';
+    ctx.strokeStyle = getColorScheme().borderSubtle;
     ctx.lineWidth = 1;
     ctx.beginPath();
     this.drawRoundedRect(ctx, borderX + 4, borderY + 4, borderWidth - 8, borderHeight - 8, 14);

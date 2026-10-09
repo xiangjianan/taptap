@@ -17,8 +17,20 @@ export default class SoundManager {
       this.sounds.click = wx.createInnerAudioContext();
       this.sounds.click.src = 'audio/click.wav';
       this.sounds.click.volume = this.volume * 0.5;
-      this.sounds.click.onError(() => {
+      const clickSound = this.sounds.click;
+      clickSound.onError(() => {
+        try { clickSound.destroy(); } catch (e) {}
+        if (this.sounds.click === clickSound) this.sounds.click = null;
         this.useGeneratedAudio = true;
+      });
+      // Reuse this low-pitched layer; rapid taps never create extra audio contexts.
+      this.sounds.impact = wx.createInnerAudioContext();
+      this.sounds.impact.src = 'audio/click.wav';
+      this.sounds.impact.volume = this.volume * 0.2;
+      const impactSound = this.sounds.impact;
+      impactSound.onError(() => {
+        try { impactSound.destroy(); } catch (e) {}
+        if (this.sounds.impact === impactSound) this.sounds.impact = null;
       });
 
       this.sounds.uiClick = wx.createInnerAudioContext();
@@ -71,22 +83,27 @@ export default class SoundManager {
   playClick(comboCount = 0) {
     if (!this.enabled) return;
 
-    if (this.useGeneratedAudio) {
+    if (!this.sounds.click) {
       try {
         AudioGenerator.generateClickSound(comboCount);
       } catch (e) {}
       return;
     }
 
-    if (!this.sounds.click) return;
     try {
       this.sounds.click.stop();
       // 连击越高，播放速率越快（频率越高）
-      const rate = Math.min(1 + comboCount * 0.06, 2.5);
+      const rate = Math.min(1 + Math.max(0, comboCount - 3) * 0.06, 2.5);
       if (this.sounds.click.playbackRate !== undefined) {
         this.sounds.click.playbackRate = rate;
       }
       this.sounds.click.play();
+      if (this.sounds.impact) {
+        this.sounds.impact.stop();
+        this.sounds.impact.playbackRate = 0.65;
+        this.sounds.impact.volume = this.volume * (comboCount >= 5 ? 0.28 : 0.18);
+        this.sounds.impact.play();
+      }
     } catch (e) {}
   }
 
@@ -212,7 +229,8 @@ export default class SoundManager {
     this.volume = Math.max(0, Math.min(1, volume));
     for (const key in this.sounds) {
       if (this.sounds[key]) {
-        this.sounds[key].volume = this.volume;
+        const gain = key === 'impact' ? 0.2 : key === 'click' ? 0.5 : 1;
+        this.sounds[key].volume = this.volume * gain;
       }
     }
   }

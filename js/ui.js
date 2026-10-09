@@ -1,5 +1,7 @@
 import { COLORS, getColorScheme, BRUTALISM_STYLES } from './constants/colors';
 import { SAFE_AREA } from './render';
+import TapEffects from './tapEffects.js';
+import { prefersReducedMotion } from './visualTheme.js';
 
 export default class UI {
   constructor(width, height) {
@@ -34,6 +36,9 @@ export default class UI {
     this.onPlayClickSound = null;
     
     this.floatingTexts = [];
+    this.tapFeedback = new TapEffects();
+    this.feedbackPoint = null;
+    this.feedbackTriggered = false;
     this.coinFlyAnimations = [];
     this.coinBoxBounce = 0;
     this.flashAlpha = 0;
@@ -154,6 +159,7 @@ export default class UI {
 
     // Dynamic background state
     this.bgPhase = 0;
+    this.reducedMotion = prefersReducedMotion();
     this.bgParticles = [];
     this.bgComboIntensity = 0;
   }
@@ -225,6 +231,8 @@ export default class UI {
     let scale = 1;
     if (isClicked) scale = 0.97;
     else if (isHovered) scale = 1.01;
+
+    scale = this.tapFeedback.getButtonScale(button.id) ?? scale;
 
     const centerX = button.x + button.width / 2;
     const centerY = button.y + button.height / 2;
@@ -318,6 +326,7 @@ export default class UI {
     if (isClicked) scale = 0.97;
     else if (isHovered) scale = 1.02;
 
+    scale = this.tapFeedback.getButtonScale(button.id) ?? scale;
     const scaledWidth = button.width * scale;
     const scaledHeight = button.height * scale;
     const scaledX = button.x + (button.width - scaledWidth) / 2;
@@ -706,11 +715,13 @@ export default class UI {
 
   handleModeSwitcherClick(x, y) {
     const segment = this.isPointInModeSwitcher(x, y);
+    if (segment && segment === this.gameMode) {
+      this.playClickFeedback();
+      return true;
+    }
     if (segment && segment !== this.gameMode) {
       this.modeSwitcher.clickedSegment = segment;
-      if (this.onPlayClickSound) {
-        this.onPlayClickSound();
-      }
+      this.playClickFeedback();
       setTimeout(() => {
         this.modeSwitcher.clickedSegment = null;
         this.onSelectMode(segment);
@@ -725,6 +736,13 @@ export default class UI {
   }
 
   showFloatingText(x, y, text, color, source = null) {
+    // Tap feedback stays compact and bounded during fast play.
+    if (source === 'tap') {
+      const tapTexts = this.floatingTexts.filter(ft => ft.source === 'tap');
+      if (tapTexts.length >= 6) {
+        this.floatingTexts.splice(this.floatingTexts.indexOf(tapTexts[0]), 1);
+      }
+    }
     this.floatingTexts.push({
       x, y, text, color,
       alpha: 1,
@@ -739,7 +757,8 @@ export default class UI {
   }
 
   triggerShake() {
-    this.shakeTime = 10;
+    this.shakeTime = 0;
+    this.shakeOffset = { x: 0, y: 0 };
   }
 
   triggerEggEffect() {
@@ -748,41 +767,28 @@ export default class UI {
   }
 
   showAchievementNotification(achievements) {
-    if (!achievements || achievements.length === 0) return;
-    
-    achievements.forEach((achievement, index) => {
-      this.achievementNotifications.push({
-        achievement,
-        startTime: Date.now() + index * 500,
-        animation: 0,
-        targetAnimation: 1
-      });
-    });
-  }
-
-  updateAchievementNotifications(deltaTime) {
-    const now = Date.now();
-    
-    for (let i = this.achievementNotifications.length - 1; i >= 0; i--) {
-      const notification = this.achievementNotifications[i];
-      
-      if (now < notification.startTime) continue;
-      
-      const elapsed = now - notification.startTime;
-      
-      if (elapsed < 300) {
-        notification.animation = Math.min(1, notification.animation + deltaTime * 5);
-      } else if (elapsed > this.achievementNotificationDuration - 300) {
-        notification.animation = Math.max(0, notification.animation - deltaTime * 5);
-      }
-      
-      if (elapsed > this.achievementNotificationDuration) {
-        this.achievementNotifications.splice(i, 1);
-      }
+    if (!achievements) return;
+    for (const achievement of achievements) {
+      this.achievementNotifications.push({ achievement, age: 0, animation: 0 });
     }
   }
 
+  hasForegroundPanel() {
+    return this.showShop || this.showSkills || this.showAchievements || this.showScoreHistory || this.showInstructions || this.showModal;
+  }
+
+  updateAchievementNotifications(deltaTime) {
+    const notification = this.achievementNotifications[0];
+    // Keep celebrations queued while players are finding numbers or reading panels.
+    if (!notification || this.gameState === 'playing' || this.hasForegroundPanel()) return;
+    notification.age += deltaTime;
+    const duration = this.achievementNotificationDuration / 1000;
+    notification.animation = Math.max(0, Math.min(1, notification.age / 0.18, (duration - notification.age) / 0.18));
+    if (notification.age >= duration) this.achievementNotifications.shift();
+  }
+
   renderAchievementNotifications(ctx) {
+    if (this.gameState === 'playing' || this.hasForegroundPanel()) return;
     const scheme = this.getScheme();
     const isMobile = this.width < 768;
     
@@ -911,6 +917,7 @@ export default class UI {
   }
 
   updateEffects(deltaTime) {
+    this.tapFeedback.update(deltaTime);
     this.shimmerTime += deltaTime;
     this.updateComboEffects(deltaTime);
     this.updateCoinFlyAnimations(deltaTime);
@@ -941,15 +948,9 @@ export default class UI {
       }
     }
 
-    if (this.shakeTime > 0) {
-      this.shakeOffset.x = (Math.random() - 0.5) * 20;
-      this.shakeOffset.y = (Math.random() - 0.5) * 20;
-      this.shakeTime -= deltaTime * 60;
-      if (this.shakeTime < 0) {
-        this.shakeTime = 0;
-        this.shakeOffset = { x: 0, y: 0 };
-      }
-    }
+    this.shakeTime = 0;
+    this.shakeOffset.x = 0;
+    this.shakeOffset.y = 0;
   }
 
   updateEggEffect(deltaTime) {
@@ -960,6 +961,7 @@ export default class UI {
   }
 
   updateDynamicBackground(deltaTime) {
+    if (this.reducedMotion) { this.bgParticles = []; return; }
     const comboCount = this.comboData.count || 0;
     const targetIntensity = comboCount >= 15 ? 2 : (comboCount >= 8 ? 1 : 0);
 
@@ -1032,10 +1034,28 @@ export default class UI {
       ctx.save();
       ctx.globalAlpha = ft.alpha;
       ctx.fillStyle = ft.color;
-      ctx.font = 'bold 32px "Arial Black", Arial, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(ft.text, ft.x, ft.y + ft.offsetY);
+      if (ft.source === 'tap') {
+        const elapsed = (1 - ft.life) / 1.5;
+        // Snap up from 75%, overshoot, then settle.
+        const scale = this.reducedMotion ? 1 : 1 - 0.25 * Math.exp(-elapsed * 18) * Math.cos(elapsed * 30);
+        const size = this.width < 768 ? 23 : 28;
+        ctx.font = `900 ${size}px "Arial Black", Arial, sans-serif`;
+        const halfWidth = ctx.measureText(ft.text).width * 1.25 / 2 + 10;
+        const x = Math.max(halfWidth, Math.min(this.width - halfWidth, ft.x));
+        const y = Math.max(this.safeArea.top + 30, ft.y + ft.offsetY - 12);
+        ctx.translate(x, y);
+        ctx.scale(scale, scale);
+        ctx.strokeStyle = '#FFFAF5';
+        ctx.lineWidth = 4;
+        ctx.lineJoin = 'round';
+        ctx.strokeText(ft.text, 0, 0);
+        ctx.fillText(ft.text, 0, 0);
+      } else {
+        ctx.font = 'bold 32px "Arial Black", Arial, sans-serif';
+        ctx.fillText(ft.text, ft.x, ft.y + ft.offsetY);
+      }
       ctx.restore();
     }
 
@@ -1150,6 +1170,11 @@ export default class UI {
   }
 
   initMenu() {
+    this.floatingTexts = this.floatingTexts.filter(text => text.source !== 'tap');
+    this.isPaused = false;
+    this.comboParticles = [];
+    this.bgComboIntensity = 0;
+    this.bgParticles = [];
     this.showCompletion = false;
     this.showFailure = false;
     this.showModal = false;
@@ -1293,6 +1318,9 @@ export default class UI {
   }
 
   initGame() {
+    this.isPaused = false;
+    this.bgComboIntensity = 0;
+    this.bgParticles = [];
     this.showCompletion = false;
     this.showFailure = false;
     this.buttons = [];
@@ -1411,7 +1439,29 @@ export default class UI {
     ];
   }
 
+  playClickFeedback() {
+    if (this.feedbackPoint && !this.feedbackTriggered) {
+      this.tapFeedback.emitContact(this.feedbackPoint, 'ui', this.clickedButton);
+      this.feedbackTriggered = true;
+    }
+    if (this.onPlayClickSound) this.onPlayClickSound();
+  }
+
   handleClick(x, y) {
+    // Consume pending UI actions so a second tap cannot fall through to the board.
+    if (this.clickedButton) return true;
+    this.feedbackPoint = { x, y };
+    this.feedbackTriggered = false;
+    try {
+      const handled = this.handleClickAction(x, y);
+      if (handled && this.clickedButton && !this.feedbackTriggered) this.playClickFeedback();
+      return handled;
+    } finally {
+      this.feedbackPoint = null;
+    }
+  }
+
+  handleClickAction(x, y) {
     if (this.clickedButton) return false;
 
     // 彩蛋弹框关闭按钮
@@ -1456,9 +1506,7 @@ export default class UI {
           y >= buttonY && y <= buttonY + buttonHeight) {
         this.clickedButton = 'achievements_close';
         this.clickAnimation = 1;
-        if (this.onPlayClickSound) {
-          this.onPlayClickSound();
-        }
+        this.playClickFeedback();
         setTimeout(() => {
           this.clickedButton = null;
           this.clickAnimation = 0;
@@ -1536,9 +1584,7 @@ export default class UI {
           y >= buttonY && y <= buttonY + buttonHeight) {
         this.clickedButton = 'instructions_ok';
         this.clickAnimation = 1;
-        if (this.onPlayClickSound) {
-          this.onPlayClickSound();
-        }
+        this.playClickFeedback();
         setTimeout(() => {
           this.clickedButton = null;
           this.clickAnimation = 0;
@@ -1562,9 +1608,7 @@ export default class UI {
             localY >= button.y && localY <= button.y + button.height) {
           this.clickedButton = button.id;
           this.clickAnimation = 1;
-          if (this.onPlayClickSound) {
-            this.onPlayClickSound();
-          }
+          this.playClickFeedback();
           setTimeout(() => {
             this.clickedButton = null;
             this.clickAnimation = 0;
@@ -1592,9 +1636,7 @@ export default class UI {
           if (this.hintCount <= 0) return true;
           this.clickedButton = button.id;
           this.clickAnimation = 1;
-          if (this.onPlayClickSound) {
-            this.onPlayClickSound();
-          }
+          this.playClickFeedback();
           setTimeout(() => {
             this.clickedButton = null;
             this.clickAnimation = 0;
@@ -1607,9 +1649,7 @@ export default class UI {
         
         this.clickedButton = button.id;
         this.clickAnimation = 1;
-        if (this.onPlayClickSound) {
-          this.onPlayClickSound();
-        }
+        this.playClickFeedback();
         setTimeout(() => {
           this.clickedButton = null;
           this.clickAnimation = 0;
@@ -2095,9 +2135,7 @@ export default class UI {
           y >= button.y && y <= button.y + button.height) {
         this.clickedButton = button.id;
         this.clickAnimation = 1;
-        if (this.onPlayClickSound) {
-          this.onPlayClickSound();
-        }
+        this.playClickFeedback();
         setTimeout(() => {
           this.clickedButton = null;
           this.clickAnimation = 0;
@@ -2112,7 +2150,13 @@ export default class UI {
     return false;
   }
 
-  render(ctx, gameState, currentNumber, totalNumbers, timeLeft = 5.0, deltaTime = 0.016) {
+  render(ctx, ...args) {
+    this.renderContent(ctx, ...args);
+    // UI feedback stays visible above shop, help and confirmation overlays.
+    this.tapFeedback.render(ctx);
+  }
+
+  renderContent(ctx, gameState, currentNumber, totalNumbers, timeLeft = 5.0, deltaTime = 0.016) {
     ctx.shadowBlur = 0;
     ctx.shadowColor = 'transparent';
     ctx.shadowOffsetX = 0;
@@ -2333,6 +2377,7 @@ export default class UI {
   }
 
   renderModernTitle(ctx, x, y, size) {
+    size = Math.min(size, (this.width - 32) / 6.92);
     const scheme = this.getScheme();
     const chars = ['数', '一', '数', '噻'];
     const tileColors = [
@@ -3550,6 +3595,7 @@ export default class UI {
   }
 
   createComboParticles(level, count, center) {
+    if (this.reducedMotion) return;
     const particleCount = Math.min(count || 5, 15);
     const color = level ? level.color : '#FBBF24';
     const originX = center ? center.x : this.width / 2;
@@ -3576,6 +3622,7 @@ export default class UI {
   }
 
   showCoinFlyEffect(amount, center) {
+    if (this.reducedMotion) return;
     const isMobile = this.width < 768;
     const topSafeArea = Math.max(this.safeArea.top, isMobile ? 44 : 0);
 
@@ -4938,9 +4985,7 @@ export default class UI {
         y >= buttonY && y <= buttonY + buttonHeight) {
       this.clickedButton = 'shop_close';
       this.clickAnimation = 1;
-      if (this.onPlayClickSound) {
-        this.onPlayClickSound();
-      }
+      this.playClickFeedback();
       setTimeout(() => {
         this.clickedButton = null;
         this.clickAnimation = 0;
@@ -5013,9 +5058,7 @@ export default class UI {
         y >= buttonY && y <= buttonY + buttonHeight) {
       this.clickedButton = 'skills_close';
       this.clickAnimation = 1;
-      if (this.onPlayClickSound) {
-        this.onPlayClickSound();
-      }
+      this.playClickFeedback();
       setTimeout(() => {
         this.clickedButton = null;
         this.clickAnimation = 0;

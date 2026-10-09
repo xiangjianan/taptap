@@ -94,6 +94,22 @@ export class AudioGenerator {
       gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
       oscillator.start(startTime);
       oscillator.stop(startTime + duration);
+
+      // A short low impact gives the bright click a physical attack.
+      const body = audioContext.createOscillator();
+      const bodyGain = audioContext.createGain();
+      body.connect(bodyGain);
+      bodyGain.connect(audioContext.destination);
+      body.frequency.setValueAtTime(180, startTime);
+      body.frequency.exponentialRampToValueAtTime(65, startTime + 0.075);
+      bodyGain.gain.setValueAtTime(0.12, startTime);
+      bodyGain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.09);
+      body.start(startTime);
+      body.stop(startTime + 0.09);
+      if ([5, 10, 15, 20, 50, 100].includes(comboCount)) {
+        this.createTone(audioContext, 1318.5, 'sine', 0.12, 0.025);
+        this.createTone(audioContext, 1760, 'sine', 0.15, 0.065);
+      }
     } catch (e) {
       // 静默处理错误
     }

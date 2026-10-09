@@ -9,6 +9,8 @@ export const COLOR_SCHEME = {
   primary: '#3B82F6',
   secondary: '#FBBF24',
   accent: '#10B981',
+  pink: '#EF6C4A',
+  gold: '#FBBF24',
   danger: '#EF4444',
   text: '#374151',
   textSecondary: '#6B7280',
